@@ -1,71 +1,75 @@
-## Foundry
+Kernel Overview
+====================================
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+This document provides a technical overview of the **Kernel** smart contract system, which facilitates token deposits and withdrawals to BEP20 asset-specific vaults.
 
-Foundry consists of:
+The system is designed to manage user balances securely and efficiently via a **StakerGateway** acting as a mediator between the users and the **Vaults**.
 
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+This architecture supports a wide range of assets and ensures flexibility and security for all interactions.
 
-## Documentation
+#### Table of Contents
 
-https://book.getfoundry.sh/
+- [Actors](#actors)
+- [Contracts](#contracts)
+---
 
-## Usage
+# Actors
 
-## Project Dependencies
+1. **User**: Can stake and unstake suported assets
+1. **StakerGateway**: User's entrypoint, permits staking and unstaking
+1. **KernelVault**: Manages users' deposits for each asset handled by the protocol
 
-- solidity 0.8.26
-- openzepplin v4
+---
 
-### Build
+# Contracts
 
-```shell
-$ forge build
-```
+### **1. StakerGateway.sol**
+The `StakerGateway` is the contract that interfaces directly with users, enabling them to stake and unstake tokens to and from the protocol. It acts as the intermediary that ensures proper authorization and routing of transactions between users and vaults.
 
-### Test
+**Key Features**
+- **Stake**: User can stake an asset by depositing tokens into the related Vault
+- **Unstake**: Facilitates the unstaking of an asset by withdrawing tokens from the vault, ensures user eligibility and transfers tokens back to the user
 
-```shell
-$ forge test
-```
+**Flows**
+1. **Staking**
+    1. User calls `stake()` function to stake an asset
+    2. The `StakerGateway` transfers the tokens from `User` to the `KernelVault` responsible for the specific asset
+    3. `KernelVault` increases `User`'s balance
+1. **Untaking**
+    1. User calls `unstake()` function to stake an asset
+    2. The `StakerGateway` transfers the tokens from the `KernelVault` responsible for the specific asset to `User`
+    3. `KernelVault` decreases `User`'s balance
+    4. 
+## **2. KernelVault.sol**
+The `KernelVault` is responsible for tracking the token balance of users within the system.
+It offers functionality for deposits and withdrawals and ensures that only `StakerGateway` can interact with the vaults.
 
-### Format
+One **KernelVault** is deployed for each asset. Vaults are deployed using the Beacon proxy pattern.
 
-```shell
-$ forge fmt
-```
+**Key Features**
+- **Deposit**: User can deposit tokens until the vault reaches a pre-defined limit, increasing his balance
+- **Withdraw**: User can withdraw tokens from the Vault, decreasing his balance
 
-### Gas Snapshots
+**Security Considerations**
+- Only `StakerGateway` can call `KernelVault.sol`'s functions, ensuring secure and controlled access
+- User balances are securely stored within the vault, preventing unauthorized access or manipulation
 
-```shell
-$ forge snapshot
-```
+### **3. AssetRegistry.sol**
+`AssetRegistry` manages the mapping of assets to their respective vaults. It stores information on supported assets and ensures that the system only processes transactions for valid asset-vault pairs.
 
-### Anvil
+**Key Features**
+- **Asset-to-Vault Mapping**: Keeps track of the vault associated with each supported asset
+- **Asset Validation**: Ensures that only supported assets are processed in the system
 
-```shell
-$ anvil
-```
+### **4. KernelConfig.sol**
+`KernelConfig` handles the overall configuration of the protocol, including role-based access control and functionalities pausing.
 
-### Deploy
+The contract allows pausing of `Deposits to all Vaults` or `Withdrawals from all Vaults` independently, or pausing `all users' functions at the same time at protocol level`.
+ 
+**Key Roles**
+- **Admin**: Manages roles and perform critical tasks
+- **Manager**: Responsible for managing system configurations, such as adding vaults and assets
+- **Pauser**: Has the ability to pause the entire protocol or some specific features like deposit and withdrawa in case of emergency
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
 
-### Cast
 
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
