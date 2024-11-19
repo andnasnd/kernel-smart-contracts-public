@@ -1,20 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.28;
 
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import { KernelConfigStorage } from "src/KernelConfigStorage.sol";
-import { IAssetRegistry } from "src/interfaces/IAssetRegistry.sol";
 import { IKernelConfig } from "src/interfaces/IKernelConfig.sol";
-import { IStakerGateway } from "src/interfaces/IStakerGateway.sol";
+import { IHasVersion } from "src/interfaces/IHasVersion.sol";
 import { AddressHelper } from "src/libraries/AddressHelper.sol";
 
 /**
  * @title Config
  * @notice Expose procotol configuration
  */
-contract KernelConfig is Initializable, AccessControlUpgradeable, IKernelConfig, KernelConfigStorage {
+contract KernelConfig is AccessControlUpgradeable, UUPSUpgradeable, IKernelConfig, IHasVersion, KernelConfigStorage {
     /* Modifiers ********************************************************************************************************/
 
     /// @notice Reverts if user does not have ADMIN role
@@ -29,7 +28,13 @@ contract KernelConfig is Initializable, AccessControlUpgradeable, IKernelConfig,
         _;
     }
 
-    /* Costructor *******************************************************************************************************/
+    /// @notice Reverts if user does not have UPGRADER role
+    modifier onlyUpgrader() {
+        _checkRole(ROLE_UPGRADER);
+        _;
+    }
+
+    /* Constructor ******************************************************************************************************/
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -57,6 +62,20 @@ contract KernelConfig is Initializable, AccessControlUpgradeable, IKernelConfig,
     }
 
     /**
+     * @notice Returns the address of the CLIS BNB contract
+     */
+    function getClisBnbAddress() external view returns (address) {
+        return _getAddress("CLIS_BNB_CONTRACT");
+    }
+
+    /**
+     * @notice Returns the address of the HelioProvider
+     */
+    function getHelioProviderAddress() external view returns (address) {
+        return _getAddress("HELIO_PROVIDER_CONTRACT");
+    }
+
+    /**
      * @notice Returns the address of the StakerGateway
      */
     function getStakerGateway() external view returns (address) {
@@ -76,6 +95,7 @@ contract KernelConfig is Initializable, AccessControlUpgradeable, IKernelConfig,
     function initialize(address adminAddr, address wbnbAddress) external initializer {
         // init
         AccessControlUpgradeable.__AccessControl_init();
+        UUPSUpgradeable.__UUPSUpgradeable_init();
 
         // grant admin role
         _grantRole(DEFAULT_ADMIN_ROLE, adminAddr);
@@ -144,6 +164,13 @@ contract KernelConfig is Initializable, AccessControlUpgradeable, IKernelConfig,
     }
 
     /**
+     * @notice Requires that an address has the UPGRADER role
+     */
+    function requireRoleUpgrader(address addr) external view {
+        require(hasRole(ROLE_UPGRADER, addr), NotUpgrader());
+    }
+
+    /**
      * @notice Sets an address
      */
     function setAddress(string calldata key, address addr) external onlyAdmin {
@@ -159,6 +186,17 @@ contract KernelConfig is Initializable, AccessControlUpgradeable, IKernelConfig,
         _setFunctionalityAsPaused(key, false);
     }
 
+    /**
+     * @notice return version
+     */
+    function version() public pure virtual returns (string memory) {
+        return "1.0";
+    }
+
+    /* Internal Functions ***********************************************************************************************/
+
+    function _authorizeUpgrade(address newImplementation) internal virtual override onlyUpgrader { }
+
     /* Private Functions ************************************************************************************************/
 
     /**
@@ -172,11 +210,13 @@ contract KernelConfig is Initializable, AccessControlUpgradeable, IKernelConfig,
      * @notice Returns an array with all the keys of supported addresses
      */
     function _getKeysSupportedForAddresses() private pure returns (bytes32[] memory) {
-        bytes32[] memory keys = new bytes32[](3);
+        bytes32[] memory keys = new bytes32[](5);
 
         keys[0] = ADDRESS_ASSET_REGISTRY;
-        keys[1] = ADDRESS_STAKER_GATEWAY;
-        keys[2] = ADDRESS_WBNB_CONTRACT;
+        keys[1] = ADDRESS_CLIS_BNB_CONTRACT;
+        keys[2] = ADDRESS_HELIO_PROVIDER_CONTRACT;
+        keys[3] = ADDRESS_STAKER_GATEWAY;
+        keys[4] = ADDRESS_WBNB_CONTRACT;
 
         return keys;
     }

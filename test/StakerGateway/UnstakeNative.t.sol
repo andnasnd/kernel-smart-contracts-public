@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.28;
 
 import { BaseTest } from "test/BaseTest.sol";
-import { ERC20Demo } from "test/mock/ERC20Demo.sol";
+import { IERC20Demo } from "test/mock/IERC20Demo.sol";
 import { IKernelVault } from "src/interfaces/IKernelVault.sol";
 import { IKernelConfig } from "src/interfaces/IKernelConfig.sol";
 
@@ -10,11 +10,11 @@ contract UnstakeNativeTest is BaseTest {
     ///
     function test_UnstakeNative() public {
         //
-        ERC20Demo asset = ERC20Demo(address(tokens.wbnb));
+        IERC20Demo asset = IERC20Demo(address(tokens.wbnb));
         uint256 amountToStake = 1.5 ether;
 
         // stake
-        vm.startPrank(users.alice);
+        _startPrank(users.alice);
         stakerGateway.stakeNative{ value: amountToStake }("referral_id");
 
         // snapshot initial balance
@@ -51,7 +51,7 @@ contract UnstakeNativeTest is BaseTest {
         uint256 amountToStake = 100 ether;
 
         // stake
-        vm.startPrank(users.alice);
+        _startPrank(users.alice);
         stakerGateway.stakeNative{ value: amountToStake }("referral_id");
 
         // try to unstake more than the amount staked
@@ -69,7 +69,7 @@ contract UnstakeNativeTest is BaseTest {
         // stake
         _stakeNative(users.alice, amountToStake);
 
-        vm.startPrank(users.alice);
+        _startPrank(users.alice);
 
         // expect revert when vault withdraw is paused
         _expectRevertCustomErrorWithMessage(
@@ -89,7 +89,7 @@ contract UnstakeNativeTest is BaseTest {
         _pauseProtocol();
 
         // try to unstake
-        vm.startPrank(users.alice);
+        _startPrank(users.alice);
 
         // expect revert when protocol is paused
         _expectRevertCustomError(IKernelConfig.ProtocolIsPaused.selector);

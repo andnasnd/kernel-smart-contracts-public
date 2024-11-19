@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.28;
 
 import { IKernelConfig } from "src/interfaces/IKernelConfig.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
@@ -9,36 +9,29 @@ contract UnpauseFunctionalityTest is BaseTest {
     ///
     function test_UnpauseFunctionality() public {
         // pause
-        vm.startPrank(users.pauser);
+        _startPrank(users.pauser);
         config.pauseFunctionality("VAULTS_DEPOSIT");
         assertTrue(config.isFunctionalityPaused("VAULTS_DEPOSIT"));
 
         // unpause
-        vm.startPrank(users.admin);
+        _startPrank(users.admin);
         config.unpauseFunctionality("VAULTS_DEPOSIT");
         assertFalse(config.isFunctionalityPaused("VAULTS_DEPOSIT"));
     }
 
     /// expect revert config.unpauseFunctionality() if user has not the right role
     function test_RevertUnpauseFunctionalitylIfNotAdmin() public {
-        vm.startPrank(users.alice);
+        _startPrank(users.alice);
 
         // expect revert
-        _expectRevertMessage(
-            string.concat(
-                "AccessControl: account ",
-                Strings.toHexString(users.alice),
-                " is missing role ",
-                Strings.toHexString(uint256(0), 32)
-            )
-        );
+        _expectRevertUnAuthorizedRole(users.alice, 0x00);
 
         config.unpauseFunctionality("VAULTS_DEPOSIT");
     }
 
     ///
     function test_RevertUnpauseFunctionalitylIfFunctionalityIsInvalid() public {
-        vm.startPrank(users.admin);
+        _startPrank(users.admin);
 
         // expect revert
         _expectRevertCustomErrorWithMessage(

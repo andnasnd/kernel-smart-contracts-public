@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.28;
 
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
@@ -13,7 +13,7 @@ contract SetAddressTest is BaseTest {
         IKernelConfig config_ = _deployConfig(tokens.wbnb);
         address demoAddress = makeAddr("foo");
 
-        vm.startPrank(users.admin);
+        _startPrank(users.admin);
 
         // set AssetRegistry
         config_.setAddress("ASSET_REGISTRY", demoAddress);
@@ -26,7 +26,7 @@ contract SetAddressTest is BaseTest {
 
     ///
     function test_RevertSetAddressIfAlreadySet() public {
-        vm.startPrank(users.admin);
+        _startPrank(users.admin);
         address demoAddress = makeAddr("foo");
 
         string[] memory keys = _getSupportedAddressesKeys();
@@ -45,7 +45,7 @@ contract SetAddressTest is BaseTest {
 
     ///
     function test_RevertSetAddressIfNotManager() public {
-        vm.startPrank(users.alice);
+        _startPrank(users.alice);
         address demoAddress = makeAddr("foo");
 
         string[] memory keys = _getSupportedAddressesKeys();
@@ -53,14 +53,8 @@ contract SetAddressTest is BaseTest {
         for (uint256 i = 0; i < keys.length; i++) {
             string memory key = keys[i];
 
-            _expectRevertMessage(
-                string.concat(
-                    "AccessControl: account ",
-                    Strings.toHexString(users.alice),
-                    " is missing role ",
-                    Strings.toHexString(0, 32)
-                )
-            );
+            _expectRevertUnAuthorizedRole(users.alice, 0x00);
+
             config.setAddress(key, demoAddress);
         }
     }
@@ -68,7 +62,7 @@ contract SetAddressTest is BaseTest {
     ///
     function test_RevertSetAddressIfAddressZero() public {
         IKernelConfig config_ = _deployConfig(tokens.wbnb);
-        vm.startPrank(users.admin);
+        _startPrank(users.admin);
 
         string[] memory keys = _getSupportedAddressesKeys();
 

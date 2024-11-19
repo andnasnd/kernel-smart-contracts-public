@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.28;
 
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
@@ -9,7 +9,7 @@ import { IKernelConfig } from "src/interfaces/IKernelConfig.sol";
 import { AddressHelper } from "src/libraries/AddressHelper.sol";
 
 import { BaseTest } from "test/BaseTest.sol";
-import { ERC20Demo } from "test/mock/ERC20Demo.sol";
+import { IERC20Demo } from "test/mock/IERC20Demo.sol";
 
 contract RemoveAssetTest is BaseTest {
     ///
@@ -34,7 +34,7 @@ contract RemoveAssetTest is BaseTest {
     ///
     function test_RemoveAsset_RevertIfNotAdded() public {
         // tokenC is not yet added
-        ERC20Demo tokenC = _deployMockERC20("C");
+        IERC20Demo tokenC = _deployMockERC20("C");
 
         // reverts because asset doesn't exist in the registry
         vm.prank(users.admin);
@@ -59,7 +59,7 @@ contract RemoveAssetTest is BaseTest {
 
     /// Removing an asset from AssetRegistry must be prevented if the KernelVault has some deposits in it
     function test_RemoveAsset_RevertIfHasDeposits() public {
-        ERC20Demo asset = tokens.a;
+        IERC20Demo asset = tokens.a;
 
         // stake
         _mintAndStake(users.alice, asset, 10 ether);

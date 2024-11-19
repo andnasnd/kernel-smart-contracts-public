@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.28;
 
 interface IStakerGateway {
     /* Events ***********************************************************************************************************/
@@ -11,6 +11,12 @@ interface IStakerGateway {
     event AssetUnstaked(address indexed staker, address indexed asset, uint256 amount, string indexed referralId);
 
     /* Errors ***********************************************************************************************************/
+
+    /// Contract couldn't receive native tokens
+    error CannotReceiveNativeTokens();
+
+    /// Function argument was invalid
+    error InvalidArgument(string);
 
     /// The unstaking failed
     error UnstakeFailed(string);
@@ -25,9 +31,13 @@ interface IStakerGateway {
 
     function stake(address asset, uint256 amount, string calldata referralId) external;
 
+    function stakeClisBNB(string calldata referralId) external payable;
+
     function stakeNative(string calldata referralId) external payable;
 
     function unstake(address asset, uint256 amount, string calldata referralId) external;
+
+    function unstakeClisBNB(uint256 amount, string calldata referralId) external;
 
     function unstakeNative(uint256 amount, string calldata referralId) external;
 }

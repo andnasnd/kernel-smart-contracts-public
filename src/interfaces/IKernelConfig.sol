@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.28;
 
-import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
-
-interface IKernelConfig is IAccessControlUpgradeable {
+interface IKernelConfig {
     /* Events ***********************************************************************************************************/
 
     event SetContract(string key, address addr);
@@ -19,11 +17,14 @@ interface IKernelConfig is IAccessControlUpgradeable {
     /// The protocol was paused
     error ProtocolIsPaused();
 
-    /// The address didn't ahve the ADMIN role
+    /// The address didn't have the ADMIN role
     error NotAdmin();
 
-    /// The address didn't ahve the MANAGER role
+    /// The address didn't have the MANAGER role
     error NotManager();
+
+    /// The address didn't have the UPGRADER role
+    error NotUpgrader();
 
     /// A sensitive key-value (eg. an address) in config was not stored
     error NotStored(string);
@@ -33,6 +34,10 @@ interface IKernelConfig is IAccessControlUpgradeable {
     function check() external view returns (bool);
 
     function getAssetRegistry() external view returns (address);
+
+    function getClisBnbAddress() external view returns (address);
+
+    function getHelioProviderAddress() external view returns (address);
 
     function getStakerGateway() external view returns (address);
 
@@ -49,6 +54,8 @@ interface IKernelConfig is IAccessControlUpgradeable {
     function requireFunctionalityVaultsDepositNotPaused() external view;
 
     function requireFunctionalityVaultsWithdrawNotPaused() external view;
+
+    function requireRoleUpgrader(address addr) external view;
 
     function requireRoleAdmin(address addr) external view;
 

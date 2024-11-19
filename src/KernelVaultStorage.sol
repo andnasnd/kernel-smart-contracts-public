@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.28;
 
 abstract contract KernelVaultStorage {
     /* State variables **************************************************************************************************/
@@ -14,7 +14,7 @@ abstract contract KernelVaultStorage {
     mapping(address => uint256) internal balances;
 
     /// deposit limit
-    uint256 public depositLimit;
+    uint256 internal depositLimit;
 
     /// storage gap for upgradeability
     uint256[50] private __gap;

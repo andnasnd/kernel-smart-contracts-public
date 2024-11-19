@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.28;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
@@ -19,7 +19,7 @@ abstract contract HasConfigUpgradeable is Initializable, IHasConfigUpgradeable {
     /// storage gap for upgradeability
     uint256[50] private __gap;
 
-    /* Costructor *******************************************************************************************************/
+    /* Constructor ******************************************************************************************************/
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {

@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.28;
 
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
-
-import { ERC20Demo } from "test/mock/ERC20Demo.sol";
-
+import { IERC20Errors } from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import { BaseTest } from "test/BaseTest.sol";
-import { ERC20Demo } from "test/mock/ERC20Demo.sol";
+import { IERC20Demo } from "test/mock/IERC20Demo.sol";
+import { ERC20WithTranferTaxDemo } from "test/mock/ERC20WithTranferTaxDemo.sol";
 import { KernelVault } from "src/KernelVault.sol";
 import { IAssetRegistry } from "src/interfaces/IAssetRegistry.sol";
 import { IStakerGateway } from "src/interfaces/IStakerGateway.sol";
@@ -18,7 +17,7 @@ contract StakeTest is BaseTest {
     function test_Stake() public {
         //
         uint256 amountToStake = 1.5 ether;
-        ERC20Demo asset = tokens.a;
+        IERC20Demo asset = tokens.a;
 
         // mint some tokens
         _mintERC20(asset, users.alice, 10 ether);
@@ -30,7 +29,7 @@ contract StakeTest is BaseTest {
         assertEq(initialErc20Balances.vaultAssetA, 0);
 
         //
-        vm.startPrank(users.alice);
+        _startPrank(users.alice);
 
         // approve ERC20
         asset.approve(address(stakerGateway), amountToStake);
@@ -49,22 +48,56 @@ contract StakeTest is BaseTest {
     }
 
     ///
+    function test_Stake_UntilReachingfDepositLimit() public {
+        IERC20Demo asset = tokens.a;
+        KernelVault vault = _getVault(asset);
+
+        // set depositLimit
+        _setDepositLimit(vault, 1000 ether);
+
+        // alice deposits half of available limit
+        _mintAndStake(users.alice, asset, 500 ether);
+
+        // bob deposits other half
+        _mintAndStake(users.bob, asset, 500 ether);
+    }
+
+    ///
+    function test_Stake_ERC20WithTransferTax() public {
+        ERC20WithTranferTaxDemo asset = _deployMockERC20WithTranferTaxDemo("a", 1000);
+        KernelVault vault = _deployKernelVault(asset, 1000 ether);
+
+        _startPrank(users.admin);
+        assetRegistry.addAsset(address(vault));
+        vm.stopPrank();
+
+        // alice stakes
+        _mintAndStake(users.alice, asset, 100 ether);
+
+        //
+        assertEq(stakerGateway.balanceOf(address(asset), users.alice), 90 ether);
+    }
+
+    ///
     function test_Stake_RevertIfInsufficientAllowance() public {
         //
         uint256 amountToStake = 1.5 ether;
-        ERC20Demo asset = tokens.a;
+        IERC20Demo asset = tokens.a;
 
         // mint some tokens
         _mintERC20(asset, users.alice, 10 ether);
 
         //
-        vm.startPrank(users.alice);
+        _startPrank(users.alice);
 
         // approve ERC20
         asset.approve(address(stakerGateway), amountToStake / 2);
 
         // stake
-        _expectRevertMessage("ERC20: insufficient allowance");
+        bytes memory errorData = abi.encodeWithSelector(
+            IERC20Errors.ERC20InsufficientAllowance.selector, address(stakerGateway), amountToStake / 2, amountToStake
+        );
+        vm.expectRevert(errorData);
         stakerGateway.stake(address(asset), amountToStake, "referral_id");
     }
 
@@ -73,13 +106,13 @@ contract StakeTest is BaseTest {
         uint256 amountToStake = 1.5 ether;
 
         // deploy new ERC20 token
-        ERC20Demo asset = _deployMockERC20("foo");
+        IERC20Demo asset = _deployMockERC20("foo");
 
         // mint
         _mintERC20(asset, users.alice, amountToStake);
 
         //
-        vm.startPrank(users.alice);
+        _startPrank(users.alice);
 
         // approve ERC20
         asset.approve(address(stakerGateway), amountToStake);
@@ -94,7 +127,7 @@ contract StakeTest is BaseTest {
 
     ///
     function test_Stake_RevertIfDepositLimitIsReached() public {
-        ERC20Demo asset = tokens.a;
+        IERC20Demo asset = tokens.a;
         KernelVault vault = _getVault(asset);
 
         // set depositLimit
@@ -105,7 +138,7 @@ contract StakeTest is BaseTest {
 
         // bob tries to deposit more than half more
         uint256 amountToStake = 501 ether;
-        vm.startPrank(users.bob);
+        _startPrank(users.bob);
 
         _mintERC20(asset, users.bob, amountToStake);
 
@@ -119,7 +152,7 @@ contract StakeTest is BaseTest {
                 "Unable to deposit an amount of ",
                 Strings.toString(amountToStake),
                 ": limit of ",
-                Strings.toString(vault.depositLimit()),
+                Strings.toString(vault.getDepositLimit()),
                 " exceeded"
             )
         );
@@ -129,7 +162,7 @@ contract StakeTest is BaseTest {
     ///
     function test_Stake_RevertIfVaultsDepositIsPaused() public {
         uint256 amountToStake = 1.5 ether;
-        ERC20Demo asset = tokens.a;
+        IERC20Demo asset = tokens.a;
 
         // Pause vault deposit
         _pauseVaultsDeposit();
@@ -137,7 +170,7 @@ contract StakeTest is BaseTest {
         // mint some tokens
         _mintERC20(asset, users.alice, amountToStake);
 
-        vm.startPrank(users.alice);
+        _startPrank(users.alice);
 
         // approve ERC20
         asset.approve(address(stakerGateway), amountToStake);
@@ -152,7 +185,7 @@ contract StakeTest is BaseTest {
     ///
     function test_Stake_RevertIfProtocolIsPaused() public {
         uint256 amountToStake = 1.5 ether;
-        ERC20Demo asset = tokens.a;
+        IERC20Demo asset = tokens.a;
 
         // Pause protocol
         _pauseProtocol();
@@ -160,7 +193,7 @@ contract StakeTest is BaseTest {
         // mint some tokens
         _mintERC20(asset, users.alice, amountToStake);
 
-        vm.startPrank(users.alice);
+        _startPrank(users.alice);
 
         // approve ERC20
         asset.approve(address(stakerGateway), amountToStake);
@@ -168,5 +201,19 @@ contract StakeTest is BaseTest {
         // expect revert when protocol is paused
         _expectRevertCustomError(IKernelConfig.ProtocolIsPaused.selector);
         stakerGateway.stake(address(asset), amountToStake, "referral_id");
+    }
+
+    ///
+    function test_Stake_RevertIfAmountIsZero() public {
+        IERC20Demo asset = tokens.a;
+
+        _startPrank(users.alice);
+
+        // approve ERC20
+        asset.approve(address(stakerGateway), 1);
+
+        // expect revert when protocol is paused
+        _expectRevertCustomErrorWithMessage(IStakerGateway.InvalidArgument.selector, "Invalid zero amount");
+        stakerGateway.stake(address(asset), 0, "referral_id");
     }
 }

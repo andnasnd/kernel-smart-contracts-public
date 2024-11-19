@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.28;
 
 import { BaseTest } from "test/BaseTest.sol";
 import { KernelVault } from "src/KernelVault.sol";
@@ -11,11 +11,11 @@ contract SetDepositLimitTest is BaseTest {
         KernelVault vaultAssetA = _getVault(tokens.a);
         uint256 depositLimit = 700 ether;
 
-        vm.startPrank(users.manager);
+        _startPrank(users.manager);
 
         // Set limit
         vaultAssetA.setDepositLimit(depositLimit);
-        assertTrue(vaultAssetA.depositLimit() == depositLimit);
+        assertTrue(vaultAssetA.getDepositLimit() == depositLimit);
     }
 
     /// test revert call of setDepositLimit by non manager
@@ -23,7 +23,7 @@ contract SetDepositLimitTest is BaseTest {
         KernelVault vaultAssetA = _getVault(tokens.a);
         uint256 depositLimit = 700 ether;
 
-        vm.startPrank(users.bob);
+        _startPrank(users.bob);
 
         // Expect revert if user is non manager
         _expectRevertCustomError(IKernelConfig.NotManager.selector);

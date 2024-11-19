@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.28;
 
-import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import { HasConfigUpgradeable } from "src/HasConfigUpgradeable.sol";
 import { IAssetRegistry } from "src/interfaces/IAssetRegistry.sol";
+import { IHasVersion } from "src/interfaces/IHasVersion.sol";
+import { IHelioProvider } from "src/interfaces/IHelioProvider.sol";
 import { IStakerGateway } from "src/interfaces/IStakerGateway.sol";
 import { IKernelVault } from "src/interfaces/IKernelVault.sol";
 import { IWBNB } from "src/interfaces/IWBNB.sol";
@@ -16,8 +19,46 @@ import { StakerGatewayStorage } from "src/StakerGatewayStorage.sol";
  * @title StakerGateway
  * @notice Main entry point of the protocol for staking and unstaking
  */
-contract StakerGateway is ReentrancyGuardUpgradeable, HasConfigUpgradeable, IStakerGateway, StakerGatewayStorage {
-    /* Costructor *******************************************************************************************************/
+contract StakerGateway is
+    UUPSUpgradeable,
+    ReentrancyGuardUpgradeable,
+    HasConfigUpgradeable,
+    IStakerGateway,
+    IHasVersion,
+    StakerGatewayStorage
+{
+    /* Modifiers ********************************************************************************************************/
+
+    /**
+     * @notice Ensures staking handles an amount > 0
+     */
+    modifier amountNotZero(uint256 amount) {
+        require(amount > 0, InvalidArgument("Invalid zero amount"));
+        _;
+    }
+
+    /**
+     * @notice Implements protection against transferring directly BNB to this contract, which is allowed only from
+     * Vault managing WBNB
+     */
+    modifier enableNativeTokenReceive() {
+        // enable receive native tokens
+        canReceiveNativeTokens = RECEIVE_NATIVE_TOKENS_TRUE;
+
+        // perform operation
+        _;
+
+        // restore initial status
+        canReceiveNativeTokens = RECEIVE_NATIVE_TOKENS_FALSE;
+    }
+
+    /// @notice Reverts if user does not have UPGRADER role
+    modifier onlyUpgrader() {
+        _config().requireRoleUpgrader(msg.sender);
+        _;
+    }
+
+    /* Constructor ******************************************************************************************************/
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -32,6 +73,7 @@ contract StakerGateway is ReentrancyGuardUpgradeable, HasConfigUpgradeable, ISta
     function initialize(address configAddr) external initializer {
         HasConfigUpgradeable.__HasConfig_init(configAddr);
         ReentrancyGuardUpgradeable.__ReentrancyGuard_init();
+        UUPSUpgradeable.__UUPSUpgradeable_init();
     }
 
     /**
@@ -54,15 +96,48 @@ contract StakerGateway is ReentrancyGuardUpgradeable, HasConfigUpgradeable, ISta
      * @param amount amount to stake
      * @dev Staker must provide prior approval to this contract for transfering ERC20 asset
      */
-    function stake(address asset, uint256 amount, string calldata referralId) external nonReentrant {
+    function stake(
+        address asset,
+        uint256 amount,
+        string calldata referralId
+    )
+        external
+        amountNotZero(amount)
+        nonReentrant
+    {
         _stake(asset, msg.sender, amount, referralId);
+    }
+
+    /**
+     * @notice Stakes native tokens in the protocol for clisBNB
+     * @dev Receives $BNB from msg.sender and delegate $clisBNB to the Vault
+     * @dev $clisBNB is a non-transferable token
+     * @dev User's staked balance can be read using stakerGateway's balanceOf()
+     */
+    function stakeClisBNB(string calldata referralId) external payable amountNotZero(msg.value) nonReentrant {
+        address assetAddress = _config().getClisBnbAddress();
+
+        // get vault balance
+        IKernelVault vault = _getVaultForAssetAddress(assetAddress);
+        uint256 vaultBalance = vault.balance();
+
+        // supply $BNB into listaDao and delegate the received $clisBNB to the Vault
+        address helioProvider = _config().getHelioProviderAddress();
+        uint256 clisBNBAmount = IHelioProvider(helioProvider).provide{ value: msg.value }(address(vault));
+
+        // stake
+        vault.deposit(vaultBalance, msg.sender);
+
+        // emit event
+        emit AssetStaked(msg.sender, assetAddress, clisBNBAmount, referralId);
     }
 
     /**
      * @notice Stakes native tokens in the protocol
      * @dev Internally converts $BNB into $WBNB and deposits them to the Vault
+     * @dev verify WNATIVE has same transferFrom() implementation as WBNB before deploying on other chains
      */
-    function stakeNative(string calldata referralId) external payable nonReentrant {
+    function stakeNative(string calldata referralId) external payable amountNotZero(msg.value) nonReentrant {
         // convert BNB into WBNB (address(this) will be the owner)
         address asset = _config().getWBNBAddress();
         uint256 amount = msg.value;
@@ -78,15 +153,61 @@ contract StakerGateway is ReentrancyGuardUpgradeable, HasConfigUpgradeable, ISta
      * @param asset address of the ERC20 token to unstake
      * @param amount amount to unstake
      */
-    function unstake(address asset, uint256 amount, string calldata referralId) external nonReentrant {
+    function unstake(
+        address asset,
+        uint256 amount,
+        string calldata referralId
+    )
+        external
+        amountNotZero(amount)
+        nonReentrant
+    {
         _unstake(IERC20(address(asset)), amount, msg.sender, msg.sender, referralId);
+    }
+
+    /**
+     * @notice Unstakes $clisBNB from the protocol
+     * @dev Internally converts $clisBNB back to $BNB and sends them to user
+     */
+    function unstakeClisBNB(
+        uint256 amount,
+        string calldata referralId
+    )
+        external
+        amountNotZero(amount)
+        nonReentrant
+        enableNativeTokenReceive
+    {
+        address assetAddress = _config().getClisBnbAddress();
+        IKernelVault vault = _getVaultForAssetAddress(assetAddress);
+
+        // withdraw from vault
+        vault.withdraw(amount, msg.sender, false);
+
+        address helioProvider = _config().getHelioProviderAddress();
+        uint256 bnbAmount = IHelioProvider(helioProvider).release(address(this), amount);
+
+        // send $BNB to owner
+        (bool sent,) = msg.sender.call{ value: bnbAmount }("");
+        require(sent, UnstakeFailed("Failed to send tokens to owner"));
+
+        // emit event
+        emit AssetUnstaked(msg.sender, assetAddress, bnbAmount, referralId);
     }
 
     /**
      * @notice Unstakes native tokens from the protocol
      * @dev Internally converts $WBNB back to $BNB and sends them to user
      */
-    function unstakeNative(uint256 amount, string calldata referralId) external nonReentrant {
+    function unstakeNative(
+        uint256 amount,
+        string calldata referralId
+    )
+        external
+        amountNotZero(amount)
+        nonReentrant
+        enableNativeTokenReceive
+    {
         IWBNB asset = IWBNB(_config().getWBNBAddress());
 
         // withdraw from vault
@@ -101,14 +222,24 @@ contract StakerGateway is ReentrancyGuardUpgradeable, HasConfigUpgradeable, ISta
     }
 
     /**
+     * @notice return version
+     */
+    function version() public pure virtual returns (string memory) {
+        return "1.0";
+    }
+
+    /**
      * @notice Enables receiving native tokens
      * @dev This is necessary to withdraw $WBNB from the Vault and transfer them to the StakerGateway (and then to the
-     * user) because WBNB.withdraw() doesn't let us specify msg.sender as receiver.
+     * user) because WBNB.withdraw() doesn't let specify msg.sender as receiver.
      */
     receive() external payable {
-        // TODO: receive() should be allowed only when calling WBNB.withdraw
-        // but require(msg.sender == address(this)); goes outOfGas
+        require(canReceiveNativeTokens == RECEIVE_NATIVE_TOKENS_TRUE, CannotReceiveNativeTokens());
     }
+
+    /* Internal Functions ***********************************************************************************************/
+
+    function _authorizeUpgrade(address newImplementation) internal virtual override onlyUpgrader { }
 
     /* Private Functions ************************************************************************************************/
 
@@ -134,14 +265,15 @@ contract StakerGateway is ReentrancyGuardUpgradeable, HasConfigUpgradeable, ISta
 
         address assetAddress = address(asset);
 
-        // get vault
+        // get vault balance
         IKernelVault vault = _getVaultForAssetAddress(assetAddress);
+        uint256 vaultBalance = vault.balance();
 
         // transfer tokens to Vault
         SafeERC20.safeTransferFrom(asset_, source, address(vault), amount);
 
         // register deposit into Vault
-        vault.deposit(amount, msg.sender);
+        vault.deposit(vaultBalance, msg.sender);
 
         // emit event
         emit AssetStaked(msg.sender, assetAddress, amount, referralId);
@@ -165,7 +297,7 @@ contract StakerGateway is ReentrancyGuardUpgradeable, HasConfigUpgradeable, ISta
         IKernelVault vault = _getVaultForAssetAddress(assetAddress);
 
         // withdraw from vault
-        vault.withdraw(amount, owner);
+        vault.withdraw(amount, owner, true);
 
         // transfer tokens
         SafeERC20.safeTransferFrom(asset, address(vault), receiver, amount);

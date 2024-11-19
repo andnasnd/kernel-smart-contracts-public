@@ -1,8 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.26;
-
-import { IAssetRegistry } from "src/interfaces/IAssetRegistry.sol";
-import { IStakerGateway } from "src/interfaces/IStakerGateway.sol";
+pragma solidity ^0.8.28;
 
 abstract contract KernelConfigStorage {
     /* Roles ************************************************************************************************************/
@@ -12,6 +9,9 @@ abstract contract KernelConfigStorage {
 
     /// Role "PAUSER"
     bytes32 public constant ROLE_PAUSER = keccak256("PAUSER");
+
+    /// Role "UPGRADER"
+    bytes32 public constant ROLE_UPGRADER = keccak256("UPGRADER");
 
     // Pause all user functionalities at protocol level
     bytes32 internal constant FUNCTIONALITY_PROTOCOL = keccak256("PROTOCOL");
@@ -26,6 +26,8 @@ abstract contract KernelConfigStorage {
 
     //
     bytes32 internal constant ADDRESS_ASSET_REGISTRY = keccak256("ASSET_REGISTRY");
+    bytes32 internal constant ADDRESS_CLIS_BNB_CONTRACT = keccak256("CLIS_BNB_CONTRACT");
+    bytes32 internal constant ADDRESS_HELIO_PROVIDER_CONTRACT = keccak256("HELIO_PROVIDER_CONTRACT");
     bytes32 internal constant ADDRESS_STAKER_GATEWAY = keccak256("STAKER_GATEWAY");
     bytes32 internal constant ADDRESS_WBNB_CONTRACT = keccak256("WBNB_CONTRACT");
 

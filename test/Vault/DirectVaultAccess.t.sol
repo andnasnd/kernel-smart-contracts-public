@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.28;
 
 import { BaseTest } from "test/BaseTest.sol";
 import { KernelVault } from "src/KernelVault.sol";
@@ -15,7 +15,7 @@ contract DirectVaultAccessTest is BaseTest {
         for (uint256 i = 0; i < allUsers.length; i++) {
             address user = allUsers[i];
 
-            vm.startPrank(user);
+            _startPrank(user);
 
             _expectRevertCustomErrorWithMessage(
                 IKernelVault.UnauthorizedCaller.selector,
@@ -33,13 +33,13 @@ contract DirectVaultAccessTest is BaseTest {
         for (uint256 i = 0; i < allUsers.length; i++) {
             address user = allUsers[i];
 
-            vm.startPrank(user);
+            _startPrank(user);
 
             _expectRevertCustomErrorWithMessage(
                 IKernelVault.UnauthorizedCaller.selector,
                 string.concat("Sender ", Strings.toHexString(user), " is not an authorized caller")
             );
-            vaultAssetA.withdraw(1 ether, address(vaultAssetA));
+            vaultAssetA.withdraw(1 ether, address(vaultAssetA), true);
         }
     }
 }

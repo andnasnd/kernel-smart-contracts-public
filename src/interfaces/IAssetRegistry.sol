@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.28;
 
 interface IAssetRegistry {
     /* Events ***********************************************************************************************************/
@@ -28,7 +28,15 @@ interface IAssetRegistry {
 
     function addAsset(address vault) external;
 
+    function getAssets() external view returns (address[] memory);
+
     function getVault(address asset) external view returns (address);
+
+    function getVaultBalance(address asset) external view returns (uint256);
+
+    function getVaultDepositLimit(address asset) external view returns (uint256);
+
+    function hasAsset(address asset) external view returns (bool);
 
     function initialize(address configAddr) external;
 

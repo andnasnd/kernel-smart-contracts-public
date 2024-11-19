@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.28;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
 import { HasConfigUpgradeable } from "src/HasConfigUpgradeable.sol";
-import { IKernelVault } from "src/interfaces/IKernelVault.sol";
 import { KernelVaultStorage } from "src/KernelVaultStorage.sol";
+import { IKernelVault } from "src/interfaces/IKernelVault.sol";
+import { AddressHelper } from "src/libraries/AddressHelper.sol";
 
 /**
  * @title Vault
  * @notice One Vault is deployed for each asset managed by the protocol
  * @dev This contract is deployed using Beacon Proxy pattern
  */
-contract KernelVault is Initializable, HasConfigUpgradeable, IKernelVault, KernelVaultStorage {
+contract KernelVault is HasConfigUpgradeable, IKernelVault, KernelVaultStorage {
     /* Modifiers ********************************************************************************************************/
 
     /// @notice Reverts if sender is not the StakerGateway
@@ -48,7 +48,7 @@ contract KernelVault is Initializable, HasConfigUpgradeable, IKernelVault, Kerne
         _;
     }
 
-    /* Costructor *******************************************************************************************************/
+    /* Constructor ******************************************************************************************************/
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -73,15 +73,29 @@ contract KernelVault is Initializable, HasConfigUpgradeable, IKernelVault, Kerne
 
     /**
      * @notice Deposit to the Vault
+     * @param vaultBalanceBefore the Vault balance before registering deposit
+     * @dev Tokens transfer must happen before calling deposit()
+     * @dev The amount deposited is not passed as argument, but inferred by balance after transferring tokens and
+     * {vaultBalanceBefore}
      */
-    function deposit(uint256 amount, address owner) external onlyFromStakerGateway onlyVaultsDepositNotPaused {
+    function deposit(
+        uint256 vaultBalanceBefore,
+        address owner
+    )
+        external
+        onlyFromStakerGateway
+        onlyVaultsDepositNotPaused
+    {
+        uint256 depositAmount = _balance() - vaultBalanceBefore;
+        require(depositAmount > 0, DepositFailed("Tokens were not transferred to Vault before calling deposit()"));
+
         // check if deposit limit is exceeded
         require(
-            amount + _balance() <= depositLimit,
+            _balance() <= depositLimit,
             DepositFailed(
                 string.concat(
                     "Unable to deposit an amount of ",
-                    Strings.toString(amount),
+                    Strings.toString(depositAmount),
                     ": limit of ",
                     Strings.toString(depositLimit),
                     " exceeded"
@@ -90,7 +104,7 @@ contract KernelVault is Initializable, HasConfigUpgradeable, IKernelVault, Kerne
         );
 
         // update balance
-        balances[owner] += amount;
+        balances[owner] += depositAmount;
     }
 
     /**
@@ -115,8 +129,16 @@ contract KernelVault is Initializable, HasConfigUpgradeable, IKernelVault, Kerne
         HasConfigUpgradeable.__HasConfig_init(configAddr);
 
         //
+        AddressHelper.requireNonZeroAddress(assetAddr);
         asset = assetAddr;
-        decimals = _getAssetDecimals(assetAddr);
+        decimals = IERC20Metadata(asset).decimals();
+    }
+
+    /**
+     * @notice Returns the deposit limit
+     */
+    function getDepositLimit() external view returns (uint256) {
+        return depositLimit;
     }
 
     /**
@@ -128,8 +150,19 @@ contract KernelVault is Initializable, HasConfigUpgradeable, IKernelVault, Kerne
 
     /**
      * @notice Withdraw from the Vault
+     * @param amount the amount to withdraw
+     * @param owner the owner of the tokens
+     * @param requireApproval whether to provide token approval to the stakerGateway
      */
-    function withdraw(uint256 amount, address owner) external onlyFromStakerGateway onlyVaultsWithdrawNotPaused {
+    function withdraw(
+        uint256 amount,
+        address owner,
+        bool requireApproval
+    )
+        external
+        onlyFromStakerGateway
+        onlyVaultsWithdrawNotPaused
+    {
         address stakerGateway = _config().getStakerGateway();
 
         // check if owner's balance is sufficient
@@ -139,8 +172,9 @@ contract KernelVault is Initializable, HasConfigUpgradeable, IKernelVault, Kerne
         balances[owner] -= amount;
 
         // update allowance of StakerGateway
-        SafeERC20.safeDecreaseAllowance(IERC20(asset), stakerGateway, 0);
-        SafeERC20.safeIncreaseAllowance(IERC20(asset), stakerGateway, amount);
+        if (requireApproval) {
+            SafeERC20.forceApprove(IERC20(asset), stakerGateway, amount);
+        }
     }
 
     /* Private Functions ************************************************************************************************/
@@ -157,22 +191,5 @@ contract KernelVault is Initializable, HasConfigUpgradeable, IKernelVault, Kerne
      */
     function _balanceOf(address address_) private view returns (uint256) {
         return balances[address_];
-    }
-
-    /**
-     * @notice Attempts to fetch the asset decimals
-     */
-    function _getAssetDecimals(address assetAddr) private view returns (uint8) {
-        uint8 returnedDecimals = ERC20(assetAddr).decimals();
-
-        // check if returnet value is valid
-        require(
-            returnedDecimals <= type(uint8).max,
-            InvalidArgument(
-                string.concat("Invalid number of decimals returned by asset ", Strings.toHexString(assetAddr))
-            )
-        );
-
-        return returnedDecimals;
     }
 }

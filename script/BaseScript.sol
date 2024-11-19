@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.28;
 
 import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
-import { ProxyAdmin } from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+import { Upgrades } from "@openzeppelin/upgrades/Upgrades.sol";
 
 import { AssetRegistry } from "src/AssetRegistry.sol";
 import { KernelConfig } from "src/KernelConfig.sol";
@@ -25,34 +27,27 @@ abstract contract BaseScript is Script {
     struct DeployOutput {
         IAssetRegistry assetRegistry;
         KernelConfig config;
-        ProxyAdmin proxyAdmin;
         StakerGateway stakerGateway;
         UpgradeableBeacon vaultUpgradeableBeacon;
-    }
-
-    ///
-    struct Wallet {
-        address addr;
-        uint256 privateKey;
     }
 
     /* Modifiers ********************************************************************************************************/
 
     ///
     modifier requiresDeployedAssetRegistry(DeployOutput memory deployOutput) {
-        require(address(deployOutput.assetRegistry) != address(0));
+        require(address(deployOutput.assetRegistry) != address(0), "AssetRegistry not deployed");
         _;
     }
 
     ///
     modifier requiresDeployedConfig(DeployOutput memory deployOutput) {
-        require(address(deployOutput.config) != address(0));
+        require(address(deployOutput.config) != address(0), "KernelConfig not deployed");
         _;
     }
 
     ///
-    modifier requiresDeployedProxyAdmin(DeployOutput memory deployOutput) {
-        require(address(deployOutput.proxyAdmin) != address(0));
+    modifier requiresDeployedVaultUpgradeableBeacon(DeployOutput memory deployOutput) {
+        require(address(deployOutput.vaultUpgradeableBeacon) != address(0), "KernelVault Beacon not deployed");
         _;
     }
 
@@ -63,13 +58,8 @@ abstract contract BaseScript is Script {
     /* Broadcast ********************************************************************************************************/
 
     ///
-    function _startBroadcast(Wallet memory wallet) internal {
-        vm.startBroadcast(wallet.privateKey);
-    }
-
-    ///
-    function _startBroadcastByDeployer() internal {
-        _startBroadcast(_getDeployer());
+    function _startBroadcast() internal {
+        vm.startBroadcast();
     }
 
     ///
@@ -80,54 +70,34 @@ abstract contract BaseScript is Script {
     /* Users ************************************************************************************************************/
 
     ///
-    function _createWallet(address addr, uint256 privateKey) internal pure returns (Wallet memory) {
-        return Wallet({ addr: addr, privateKey: privateKey });
+    function _getAdmin() internal view returns (address) {
+        return vm.envAddress("ADMIN_ADDRESS");
     }
 
     ///
-    function _getAdmin() internal returns (Wallet memory) {
-        return _createWallet(
-            vm.createWallet(vm.envUint("ADMIN_PRIVATE_KEY")).addr,
-            vm.createWallet(vm.envUint("ADMIN_PRIVATE_KEY")).privateKey
-        );
+    function _getDeployer() internal returns (address) {
+        (, address msgSender,) = vm.readCallers();
+
+        return msgSender;
     }
 
     ///
-    function _getDeployer() internal returns (Wallet memory) {
-        return _createWallet(
-            vm.createWallet(vm.envUint("DEPLOYER_PRIVATE_KEY")).addr,
-            vm.createWallet(vm.envUint("DEPLOYER_PRIVATE_KEY")).privateKey
-        );
+    function _getManager() internal view returns (address) {
+        return vm.envAddress("MANAGER_ADDRESS");
     }
 
     ///
-    function _getManager() internal returns (Wallet memory) {
-        return _createWallet(
-            vm.createWallet(vm.envUint("MANAGER_PRIVATE_KEY")).addr,
-            vm.createWallet(vm.envUint("MANAGER_PRIVATE_KEY")).privateKey
-        );
-    }
-
-    ///
-    function _getPauser() internal returns (Wallet memory) {
-        return _createWallet(
-            vm.createWallet(vm.envUint("PAUSER_PRIVATE_KEY")).addr,
-            vm.createWallet(vm.envUint("PAUSER_PRIVATE_KEY")).privateKey
-        );
+    function _getPauser() internal view returns (address) {
+        return vm.envAddress("PAUSER_ADDRESS");
     }
 
     /* Deploy ***********************************************************************************************************/
 
     /// Deploy AssetRegistry
     function _deployAssetRegistry(DeployOutput memory deployOutput) internal requiresDeployedConfig(deployOutput) {
-        // deploy implementation
-        AssetRegistry implementation = new AssetRegistry();
-
         // deploy proxy
-        TransparentUpgradeableProxy proxy = _deployTransparentProxy(
-            deployOutput,
-            address(implementation),
-            abi.encodeCall(IAssetRegistry.initialize, (address(deployOutput.config)))
+        ERC1967Proxy proxy = _deployUUPSProxy(
+            "AssetRegistry.sol", abi.encodeCall(IAssetRegistry.initialize, (address(deployOutput.config)))
         );
 
         //
@@ -136,25 +106,20 @@ abstract contract BaseScript is Script {
 
     ///
     function _deployBeaconProxy(address beacon, bytes memory initializeData) internal returns (BeaconProxy) {
-        return new BeaconProxy(beacon, initializeData);
+        return BeaconProxy(payable(Upgrades.deployBeaconProxy(beacon, initializeData)));
     }
 
     /// Deploy Config
     function _deployConfig(DeployOutput memory deployOutput, address wbnbAddress) internal {
-        // deploy implementation
-        KernelConfig implementation = new KernelConfig();
-
         // deploy proxy
-        TransparentUpgradeableProxy proxy = _deployTransparentProxy(
-            deployOutput,
-            address(implementation),
-            abi.encodeCall(IKernelConfig(address(implementation)).initialize, (_getDeployer().addr, wbnbAddress))
+        ERC1967Proxy proxy = _deployUUPSProxy(
+            "KernelConfig.sol", abi.encodeCall(IKernelConfig.initialize, (_getDeployer(), wbnbAddress))
         );
 
         // log
-        console.log(string.concat("  role DEFAULT_ADMIN_ROLE to: ", Strings.toHexString(_getAdmin().addr)));
-        console.log(string.concat("  role ROLE_MANAGER to:       ", Strings.toHexString(_getManager().addr)));
-        console.log(string.concat("  role ROLE_PAUSER to:        ", Strings.toHexString(_getPauser().addr)));
+        console.log(string.concat("  role DEFAULT_ADMIN_ROLE to: ", Strings.toHexString(_getAdmin())));
+        console.log(string.concat("  role ROLE_MANAGER to:       ", Strings.toHexString(_getManager())));
+        console.log(string.concat("  role ROLE_PAUSER to:        ", Strings.toHexString(_getPauser())));
         console.log("");
 
         //
@@ -164,56 +129,32 @@ abstract contract BaseScript is Script {
     /// Deploy a demo ERC20 token
     function _deployERC20DemoToken(
         DeployOutput memory deployOutput,
-        string memory symbol,
-        uint256 vaultDepositLimit
+        string memory symbol
     )
         internal
-        returns (ERC20Demo)
+        returns (KernelVault)
     {
         // deploy token
         ERC20Demo token = new ERC20Demo(symbol, symbol);
 
         //
-        _onERC20DemoDeploy(deployOutput, token, vaultDepositLimit);
-
-        //
-        return token;
+        return _onERC20DemoDeploy(deployOutput, token);
     }
 
     /// Deploy a demo WBNB token
-    function _deployMockWBNB(DeployOutput memory deployOutput, uint256 vaultDepositLimit) internal returns (WBNB) {
+    function _deployMockWBNB(DeployOutput memory deployOutput) internal returns (KernelVault) {
         // deploy token
         WBNB token = new WBNB();
 
         //
-        _onERC20DemoDeploy(deployOutput, ERC20Demo(address(token)), vaultDepositLimit);
-
-        //
-        return token;
-    }
-
-    ///
-    function _deployProxyAdmin(DeployOutput memory deployOutput) internal {
-        ProxyAdmin proxyAdmin_ = new ProxyAdmin();
-
-        // log
-        console.log("  proxy: ", address(proxyAdmin_));
-        console.log("");
-
-        //
-        deployOutput.proxyAdmin = proxyAdmin_;
+        return _onERC20DemoDeploy(deployOutput, ERC20Demo(address(token)));
     }
 
     /// Deploy StakerGateway
     function _deployStakerGateway(DeployOutput memory deployOutput) internal requiresDeployedConfig(deployOutput) {
-        // deploy implementation
-        StakerGateway implementation = new StakerGateway();
-
         // deploy proxy
-        TransparentUpgradeableProxy proxy = _deployTransparentProxy(
-            deployOutput,
-            address(implementation),
-            abi.encodeCall(IStakerGateway.initialize, (address(deployOutput.config)))
+        ERC1967Proxy proxy = _deployUUPSProxy(
+            "StakerGateway.sol", abi.encodeCall(IStakerGateway.initialize, (address(deployOutput.config)))
         );
 
         //
@@ -221,21 +162,19 @@ abstract contract BaseScript is Script {
     }
 
     ///
-    function _deployTransparentProxy(
-        DeployOutput memory deployOutput,
-        address implementation,
+    function _deployUUPSProxy(
+        string memory contractName,
         bytes memory initializeData
     )
         internal
-        requiresDeployedProxyAdmin(deployOutput)
-        returns (TransparentUpgradeableProxy)
+        returns (ERC1967Proxy)
     {
-        TransparentUpgradeableProxy proxy =
-            new TransparentUpgradeableProxy(implementation, address(deployOutput.proxyAdmin), initializeData);
+        address proxyAddr = Upgrades.deployUUPSProxy(contractName, initializeData);
+        ERC1967Proxy proxy = ERC1967Proxy(payable(proxyAddr));
 
         // log
-        console.log("  proxy:          ", address(proxy));
-        console.log("  implementation: ", implementation);
+        console.log("  UUPS proxy:     ", proxyAddr);
+        console.log("  implementation: ", _getProxyImplementation(proxy));
         console.log("");
 
         //
@@ -243,21 +182,16 @@ abstract contract BaseScript is Script {
     }
 
     /// Deploy a Vault
-    function _deployVault(
+    function _deployKernelVault(
         DeployOutput memory deployOutput,
-        ERC20Demo asset,
-        uint256 depositLimit
+        IERC20 asset
     )
         internal
         requiresDeployedConfig(deployOutput)
         requiresDeployedAssetRegistry(deployOutput)
+        requiresDeployedVaultUpgradeableBeacon(deployOutput)
         returns (KernelVault)
     {
-        // deploy vaultUpgradeableBeacon
-        if (address(deployOutput.vaultUpgradeableBeacon) == address(0)) {
-            deployOutput.vaultUpgradeableBeacon = _deployVaultUpgradeableBeacon();
-        }
-
         // initialize
         bytes memory initializeData =
             abi.encodeCall(IKernelVault.initialize, (address(asset), address(deployOutput.config)));
@@ -266,15 +200,12 @@ abstract contract BaseScript is Script {
         //
         KernelVault vault = KernelVault(address(proxy));
 
-        // set deposit limit
-        vault.setDepositLimit(depositLimit);
-
-        // add asset to AssetRegistry
-        deployOutput.assetRegistry.addAsset(address(vault));
-
         //
         console.log("  Vault (beacon Proxy)");
-        console.log("    for token:      ", address(asset));
+        console.log(
+            "    for token:      ",
+            string.concat(Strings.toHexString(address(asset)), " (", ERC20(address(asset)).symbol(), ")")
+        );
         console.log("    proxy:          ", address(proxy));
         console.log("    implementation: ", address(deployOutput.vaultUpgradeableBeacon.implementation()));
         console.log("");
@@ -282,52 +213,75 @@ abstract contract BaseScript is Script {
         return vault;
     }
 
-    /// Deploy Vault Beacon
-    function _deployVaultUpgradeableBeacon() internal returns (UpgradeableBeacon) {
-        KernelVault kernelVaultImplementation = new KernelVault();
+    /// Deploy a Vault
+    function _deployKernelVaultAndAddToAssetRegistry(
+        DeployOutput memory deployOutput,
+        IERC20 asset
+    )
+        internal
+        requiresDeployedConfig(deployOutput)
+        requiresDeployedAssetRegistry(deployOutput)
+        returns (KernelVault)
+    {
+        // deploy Vault
+        KernelVault vault = _deployKernelVault(deployOutput, asset);
 
+        // add asset to AssetRegistry
+        deployOutput.assetRegistry.addAsset(address(vault));
+
+        // return
+        return vault;
+    }
+
+    /// Deploy Vault Beacon
+    function _deployKernelVaultUpgradeableBeacon(DeployOutput memory deployOutput) internal {
         // deploy Beacon
-        UpgradeableBeacon vaultUpgradeableBeacon_ = new UpgradeableBeacon(address(kernelVaultImplementation));
+        address upgradeableBeaconAddress = Upgrades.deployBeacon("KernelVault.sol:KernelVault", _getAdmin());
 
         // log
         console.log("  Vault UpgradeableBeacon");
-        console.log("    UpgradeableBeacon deployed at: ", address(vaultUpgradeableBeacon_));
+        console.log("    UpgradeableBeacon deployed at:          ", upgradeableBeaconAddress);
+        console.log(
+            "    KernelVault implementation deployed at: ", UpgradeableBeacon(upgradeableBeaconAddress).implementation()
+        );
         console.log("");
 
         //
-        return vaultUpgradeableBeacon_;
+        deployOutput.vaultUpgradeableBeacon = UpgradeableBeacon(upgradeableBeaconAddress);
+    }
+
+    ///
+    function _getProxyImplementation(ERC1967Proxy proxy) internal view returns (address) {
+        return Upgrades.getImplementationAddress(address(proxy));
     }
 
     /// Deploy a demo WBNB token
-    function _onERC20DemoDeploy(
-        DeployOutput memory deployOutput,
-        ERC20Demo token,
-        uint256 vaultDepositLimit
-    )
-        internal
-    {
+    function _onERC20DemoDeploy(DeployOutput memory deployOutput, ERC20Demo token) internal returns (KernelVault) {
         // log
         console.log(string.concat("  Deployed demo ERC20 token \"", token.symbol(), "\" at "), address(token));
         console.log("");
 
         // deploy Vault
-        _deployVault(deployOutput, token, vaultDepositLimit);
+        return _deployKernelVaultAndAddToAssetRegistry(deployOutput, token);
+    }
+
+    ///
+    function _printDebugAddress(string memory name, address addr) internal pure {
+        console.log(string.concat("  ", name, ":     ", Strings.toHexString(addr)));
     }
 
     ///
     function _printUsersDebug() internal {
         console.log("##### Users");
-        _printWalletDebug("Deployer", _getDeployer());
-        _printWalletDebug("Admin", _getAdmin());
-        _printWalletDebug("Manager", _getManager());
-        _printWalletDebug("Pauser", _getPauser());
+        _printDebugAddress("Deployer", _getDeployer());
+        _printDebugAddress("Admin", _getAdmin());
+        _printDebugAddress("Manager", _getManager());
+        _printDebugAddress("Pauser", _getPauser());
         console.log("");
     }
 
     ///
-    function _printWalletDebug(string memory name, Wallet memory wallet) internal pure {
-        console.log(string.concat("  ", name));
-        console.log(string.concat("    address:     ", Strings.toHexString(wallet.addr)));
-        // console.log(string.concat("    private key: ", Strings.toHexString(wallet.privateKey)));
+    function _promptAddress(string memory input) internal returns (address) {
+        return vm.parseAddress(vm.prompt(input));
     }
 }
