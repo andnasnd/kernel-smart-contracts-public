@@ -9,6 +9,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { HasConfigUpgradeable } from "src/HasConfigUpgradeable.sol";
 import { IAssetRegistry } from "src/interfaces/IAssetRegistry.sol";
 import { IHasVersion } from "src/interfaces/IHasVersion.sol";
+import { IHelioProvider } from "src/interfaces/IHelioProvider.sol";
 import { IStakerGateway } from "src/interfaces/IStakerGateway.sol";
 import { IKernelVault } from "src/interfaces/IKernelVault.sol";
 import { IWBNB } from "src/interfaces/IWBNB.sol";
@@ -108,6 +109,30 @@ contract StakerGateway is
     }
 
     /**
+     * @notice Stakes native tokens in the protocol for clisBNB
+     * @dev Receives $BNB from msg.sender and delegate $clisBNB to the Vault
+     * @dev $clisBNB is a non-transferable token
+     * @dev User's staked balance can be read using stakerGateway's balanceOf()
+     */
+    function stakeClisBNB(string calldata referralId) external payable amountNotZero(msg.value) nonReentrant {
+        address assetAddress = _config().getClisBnbAddress();
+
+        // get vault balance
+        IKernelVault vault = _getVaultForAssetAddress(assetAddress);
+        uint256 vaultBalance = vault.balance();
+
+        // supply $BNB into ListaDao and delegate the received $clisBNB to the Vault
+        address helioProvider = _config().getHelioProviderAddress();
+        uint256 clisBNBAmount = IHelioProvider(helioProvider).provide{ value: msg.value }(address(vault));
+
+        // stake
+        vault.deposit(vaultBalance, msg.sender);
+
+        // emit event
+        emit AssetStaked(msg.sender, assetAddress, clisBNBAmount, referralId);
+    }
+
+    /**
      * @notice Stakes native tokens in the protocol
      * @dev Internally converts $BNB into $WBNB and deposits them to the Vault
      * @dev verify WNATIVE has same transferFrom() implementation as WBNB before deploying on other chains
@@ -138,6 +163,32 @@ contract StakerGateway is
         nonReentrant
     {
         _unstake(IERC20(address(asset)), amount, msg.sender, msg.sender, referralId);
+    }
+
+    /**
+     * @notice Unstakes $clisBNB from the protocol
+     * @dev Internally converts $clisBNB back to $BNB and sends them to user
+     */
+    function unstakeClisBNB(
+        uint256 amount,
+        string calldata referralId
+    )
+        external
+        amountNotZero(amount)
+        nonReentrant
+        enableNativeTokenReceive
+    {
+        address assetAddress = _config().getClisBnbAddress();
+        IKernelVault vault = _getVaultForAssetAddress(assetAddress);
+
+        // withdraw from vault
+        vault.withdraw(amount, msg.sender, false);
+
+        address helioProvider = _config().getHelioProviderAddress();
+        uint256 bnbAmount = IHelioProvider(helioProvider).release(msg.sender, amount);
+
+        // emit event
+        emit AssetUnstaked(msg.sender, assetAddress, bnbAmount, referralId);
     }
 
     /**
@@ -240,7 +291,7 @@ contract StakerGateway is
         IKernelVault vault = _getVaultForAssetAddress(assetAddress);
 
         // withdraw from vault
-        vault.withdraw(amount, owner);
+        vault.withdraw(amount, owner, true);
 
         // transfer tokens
         SafeERC20.safeTransferFrom(asset, address(vault), receiver, amount);

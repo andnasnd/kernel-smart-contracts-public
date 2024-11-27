@@ -33,7 +33,7 @@ contract DeployToSepoliaTestnet is DeployProtocolAbstract {
         address wbnbAddress = _deployMockWBNB();
 
         // deploy Kernel
-        DeployOutput memory deployOutput = _deployProtocol(wbnbAddress, new address[](0), true);
+        DeployOutput memory deployOutput = _deployProtocol(wbnbAddress, _getAdmin(), new address[](0), true);
 
         // deploy mock token $C without adding it to Kernel
         _deployMockTokenWithoutAddingToProtocol(deployOutput, "C");

@@ -44,6 +44,7 @@ contract DeployToBscMainnet is DeployProtocolAbstract {
         // deploy Upgrader Timelock (30 min delay)
         upgraderTimelock = _deployTimelockController(AddressUtils._buildArray1(upgraderTimelockProposer), 30 * 60);
 
+        // list of supported ERC20 tokens
         address[] memory erc20Tokens = new address[](5);
 
         erc20Tokens[0] = BNBX_ADDRESS;
@@ -53,7 +54,8 @@ contract DeployToBscMainnet is DeployProtocolAbstract {
         erc20Tokens[4] = SOLV_BTC_BBN_ADDRESS;
 
         // deploy Kernel
-        _deployProtocol(WBNB_ADDRESS, erc20Tokens, false);
+        // @dev set Timelock Controller as KernelVault Beacon admin
+        _deployProtocol(WBNB_ADDRESS, address(upgraderTimelock), erc20Tokens, false);
 
         // stop broadcast
         _stopBroadcast();

@@ -25,7 +25,7 @@ contract DeployToBscTestnet is DeployProtocolAbstract {
         _startBroadcast();
 
         // deploy protocol
-        _deployProtocol(WBNB_ADDRESS, erc20Tokens, deployDemoTokens);
+        _deployProtocol(WBNB_ADDRESS, _getAdmin(), erc20Tokens, deployDemoTokens);
 
         // stop broadcast
         _stopBroadcast();

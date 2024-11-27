@@ -248,9 +248,10 @@ abstract contract BaseScript is Script {
     }
 
     /// Deploy Vault Beacon
-    function _deployKernelVaultUpgradeableBeacon(DeployOutput memory deployOutput) internal {
+    /// @param admin_ the address with ownership on the Beacon (will be able to upgrade implementation)
+    function _deployKernelVaultUpgradeableBeacon(DeployOutput memory deployOutput, address admin_) internal {
         // deploy Beacon
-        address upgradeableBeaconAddress = Upgrades.deployBeacon("KernelVault.sol:KernelVault", _getAdmin());
+        address upgradeableBeaconAddress = Upgrades.deployBeacon("KernelVault.sol:KernelVault", admin_);
 
         // log
         console.log("");

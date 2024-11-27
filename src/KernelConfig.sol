@@ -47,9 +47,9 @@ contract KernelConfig is AccessControlUpgradeable, UUPSUpgradeable, IKernelConfi
      * notice Returns true if every sensitive value has been configured and Config is production ready
      */
     function check() external view returns (bool) {
-        require(_getAddress(STR_ASSET_REGISTRY) != address(0), NotStored("AssetRegistry address not set"));
-        require(_getAddress(STR_STAKER_GATEWAY) != address(0), NotStored("StakerGateway address not set"));
-        require(_getAddress(STR_WBNB_CONTRACT) != address(0), NotStored("WBNB address not set"));
+        require(_getAddress(STR_ADDRESS_ASSET_REGISTRY) != address(0), NotStored("AssetRegistry address not set"));
+        require(_getAddress(STR_ADDRESS_STAKER_GATEWAY) != address(0), NotStored("StakerGateway address not set"));
+        require(_getAddress(STR_ADDRESS_WBNB_CONTRACT) != address(0), NotStored("WBNB address not set"));
 
         return true;
     }
@@ -58,21 +58,35 @@ contract KernelConfig is AccessControlUpgradeable, UUPSUpgradeable, IKernelConfi
      * @notice Returns the address of the AssetRegistry
      */
     function getAssetRegistry() external view returns (address) {
-        return _getAddress(STR_ASSET_REGISTRY);
+        return _getAddress(STR_ADDRESS_ASSET_REGISTRY);
+    }
+
+    /**
+     * @notice Returns the address of the CLIS BNB contract
+     */
+    function getClisBnbAddress() external view returns (address) {
+        return _getAddress(STR_ADDRESS_CLIS_BNB);
+    }
+
+    /**
+     * @notice Returns the address of the HelioProvider
+     */
+    function getHelioProviderAddress() external view returns (address) {
+        return _getAddress(STR_ADDRESS_HELIO_PROVIDER);
     }
 
     /**
      * @notice Returns the address of the StakerGateway
      */
     function getStakerGateway() external view returns (address) {
-        return _getAddress(STR_STAKER_GATEWAY);
+        return _getAddress(STR_ADDRESS_STAKER_GATEWAY);
     }
 
     /**
      *  @notice Returns the address of the WBNB token
      */
     function getWBNBAddress() external view returns (address) {
-        return _getAddress(STR_WBNB_CONTRACT);
+        return _getAddress(STR_ADDRESS_WBNB_CONTRACT);
     }
 
     /**
@@ -87,7 +101,7 @@ contract KernelConfig is AccessControlUpgradeable, UUPSUpgradeable, IKernelConfi
         _grantRole(DEFAULT_ADMIN_ROLE, adminAddr);
 
         // set WBNB contract address
-        _setAddress(STR_WBNB_CONTRACT, wbnbAddress);
+        _setAddress(STR_ADDRESS_WBNB_CONTRACT, wbnbAddress);
     }
 
     /**
@@ -98,7 +112,7 @@ contract KernelConfig is AccessControlUpgradeable, UUPSUpgradeable, IKernelConfi
      */
     function isFunctionalityPaused(string memory key, bool includeProtocol) external view returns (bool) {
         // if protocol is paused, return true in any case
-        if (includeProtocol && _isFunctionalityPaused(STR_PROTOCOL)) {
+        if (includeProtocol && _isFunctionalityPaused(STR_FUNCTIONALITY_PROTOCOL)) {
             return true;
         }
 
@@ -109,7 +123,7 @@ contract KernelConfig is AccessControlUpgradeable, UUPSUpgradeable, IKernelConfi
      * @notice Returns true if the protocol is paused
      */
     function isProtocolPaused() external view returns (bool) {
-        return _isFunctionalityPaused(STR_PROTOCOL);
+        return _isFunctionalityPaused(STR_FUNCTIONALITY_PROTOCOL);
     }
 
     /**
@@ -129,7 +143,7 @@ contract KernelConfig is AccessControlUpgradeable, UUPSUpgradeable, IKernelConfi
         _requireProtocolNotPaused();
 
         // check if functionality is paused
-        _requireFunctionalityNotPaused(STR_VAULTS_DEPOSIT);
+        _requireFunctionalityNotPaused(STR_FUNCTIONALITY_VAULTS_DEPOSIT);
     }
 
     /**
@@ -140,7 +154,7 @@ contract KernelConfig is AccessControlUpgradeable, UUPSUpgradeable, IKernelConfi
         _requireProtocolNotPaused();
 
         // check if functionality is paused
-        _requireFunctionalityNotPaused(STR_VAULTS_WITHDRAW);
+        _requireFunctionalityNotPaused(STR_FUNCTIONALITY_VAULTS_WITHDRAW);
     }
 
     /**
@@ -204,11 +218,13 @@ contract KernelConfig is AccessControlUpgradeable, UUPSUpgradeable, IKernelConfi
      * @notice Returns an array with all the keys of supported addresses
      */
     function _getKeysSupportedForAddresses() private pure returns (bytes32[] memory) {
-        bytes32[] memory keys = new bytes32[](3);
+        bytes32[] memory keys = new bytes32[](5);
 
         keys[0] = ADDRESS_ASSET_REGISTRY;
-        keys[1] = ADDRESS_STAKER_GATEWAY;
-        keys[2] = ADDRESS_WBNB_CONTRACT;
+        keys[1] = ADDRESS_CLIS_BNB_CONTRACT;
+        keys[2] = ADDRESS_HELIO_PROVIDER_CONTRACT;
+        keys[3] = ADDRESS_STAKER_GATEWAY;
+        keys[4] = ADDRESS_WBNB_CONTRACT;
 
         return keys;
     }
@@ -292,7 +308,7 @@ contract KernelConfig is AccessControlUpgradeable, UUPSUpgradeable, IKernelConfi
      * @notice Reverts if protocol is paused
      */
     function _requireProtocolNotPaused() private view {
-        require(!_isFunctionalityPaused(STR_PROTOCOL), ProtocolIsPaused());
+        require(!_isFunctionalityPaused(STR_FUNCTIONALITY_PROTOCOL), ProtocolIsPaused());
     }
 
     /**

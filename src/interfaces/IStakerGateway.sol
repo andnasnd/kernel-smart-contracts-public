@@ -31,9 +31,13 @@ interface IStakerGateway {
 
     function stake(address asset, uint256 amount, string calldata referralId) external;
 
+    function stakeClisBNB(string calldata referralId) external payable;
+
     function stakeNative(string calldata referralId) external payable;
 
     function unstake(address asset, uint256 amount, string calldata referralId) external;
+
+    function unstakeClisBNB(uint256 amount, string calldata referralId) external;
 
     function unstakeNative(uint256 amount, string calldata referralId) external;
 }

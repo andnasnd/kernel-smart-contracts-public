@@ -12,11 +12,13 @@ abstract contract DeployProtocolAbstract is BaseScript {
     /**
      * @notice Deploy the whole protocl in testnet, including mock ERC20 tokens
      * @param wbnbAddress mandatory, address of the WBNB contract to support native staking/unstaking
+     * @param kernelVaultBeaconAdmin the address with ownership on the Beacon (will be able to upgrade implementation)
      * @param erc20Tokens pre-existing ERC20 tokens to add in the asset registry
      * @param deployDemoTokens if true, deploy demo ERC20 tokens
      */
     function _deployProtocol(
         address wbnbAddress,
+        address kernelVaultBeaconAdmin,
         address[] memory erc20Tokens,
         bool deployDemoTokens
     )
@@ -50,9 +52,10 @@ abstract contract DeployProtocolAbstract is BaseScript {
         //
         deployOutput.config.setAddress("STAKER_GATEWAY", address(deployOutput.stakerGateway));
 
+        console.log("");
         console.log("##### Vaults");
         // deploy Vaults UpgradeableBeacon
-        _deployKernelVaultUpgradeableBeacon(deployOutput);
+        _deployKernelVaultUpgradeableBeacon(deployOutput, kernelVaultBeaconAdmin);
 
         // (optionally) deploy ERC20 demo tokens
         if (deployDemoTokens) {
@@ -67,12 +70,12 @@ abstract contract DeployProtocolAbstract is BaseScript {
 
         // deploy pre-existing erc20 token vaults
         for (uint256 i = 0; i < erc20Tokens.length; i++) {
-            KernelVault vault = _deployKernelVaultAndAddToAssetRegistry(deployOutput, ERC20Demo(erc20Tokens[i]));
+            _deployKernelVaultAndAddToAssetRegistry(deployOutput, ERC20Demo(erc20Tokens[i]));
             // vault.setDepositLimit(500 ether);
         }
 
         // deploy WBNB vault to support native BNB
-        KernelVault vaultWBNB = _deployKernelVaultAndAddToAssetRegistry(deployOutput, ERC20Demo(wbnbAddress));
+        _deployKernelVaultAndAddToAssetRegistry(deployOutput, ERC20Demo(wbnbAddress));
         // vaultWBNB.setDepositLimit(500 ether);
 
         //

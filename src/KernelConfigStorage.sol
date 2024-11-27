@@ -14,30 +14,38 @@ abstract contract KernelConfigStorage {
     bytes32 public constant ROLE_UPGRADER = keccak256("UPGRADER");
 
     // Pause all user functionalities at protocol level
-    bytes32 internal constant FUNCTIONALITY_PROTOCOL = keccak256("PROTOCOL");
+    bytes32 internal constant FUNCTIONALITY_PROTOCOL = keccak256(abi.encodePacked(STR_FUNCTIONALITY_PROTOCOL));
 
     /// Pause all Vaults deposits
-    bytes32 internal constant FUNCTIONALITY_VAULTS_DEPOSIT = keccak256("VAULTS_DEPOSIT");
+    bytes32 internal constant FUNCTIONALITY_VAULTS_DEPOSIT =
+        keccak256(abi.encodePacked(STR_FUNCTIONALITY_VAULTS_DEPOSIT));
 
     /// Pause all Vaults withdraws
-    bytes32 internal constant FUNCTIONALITY_VAULTS_WITHDRAW = keccak256("VAULTS_WITHDRAW");
+    bytes32 internal constant FUNCTIONALITY_VAULTS_WITHDRAW =
+        keccak256(abi.encodePacked(STR_FUNCTIONALITY_VAULTS_WITHDRAW));
 
     /* Constants ********************************************************************************************************/
 
-    /// constant strings for each address
-    string internal constant STR_ASSET_REGISTRY = "ASSET_REGISTRY";
-    string internal constant STR_PROTOCOL = "PROTOCOL";
-    string internal constant STR_STAKER_GATEWAY = "STAKER_GATEWAY";
-    string internal constant STR_VAULTS_DEPOSIT = "VAULTS_DEPOSIT";
-    string internal constant STR_VAULTS_WITHDRAW = "VAULTS_WITHDRAW";
-    string internal constant STR_WBNB_CONTRACT = "WBNB_CONTRACT";
+    /// constant strings for features (eg. use as argument for KernelConfig::pauseFunctionality())
+    string internal constant STR_FUNCTIONALITY_PROTOCOL = "PROTOCOL";
+    string internal constant STR_FUNCTIONALITY_VAULTS_DEPOSIT = "VAULTS_DEPOSIT";
+    string internal constant STR_FUNCTIONALITY_VAULTS_WITHDRAW = "VAULTS_WITHDRAW";
+
+    /// constant strings for addresses (eg. use as argument for KernelConfig::setAddress())
+    string internal constant STR_ADDRESS_ASSET_REGISTRY = "ASSET_REGISTRY";
+    string internal constant STR_ADDRESS_CLIS_BNB = "CLIS_BNB";
+    string internal constant STR_ADDRESS_HELIO_PROVIDER = "HELIO_PROVIDER";
+    string internal constant STR_ADDRESS_STAKER_GATEWAY = "STAKER_GATEWAY";
+    string internal constant STR_ADDRESS_WBNB_CONTRACT = "WBNB_CONTRACT";
 
     /* Addresses ********************************************************************************************************/
 
     //
-    bytes32 internal constant ADDRESS_ASSET_REGISTRY = keccak256("ASSET_REGISTRY");
-    bytes32 internal constant ADDRESS_STAKER_GATEWAY = keccak256("STAKER_GATEWAY");
-    bytes32 internal constant ADDRESS_WBNB_CONTRACT = keccak256("WBNB_CONTRACT");
+    bytes32 internal constant ADDRESS_ASSET_REGISTRY = keccak256(abi.encodePacked(STR_ADDRESS_ASSET_REGISTRY));
+    bytes32 internal constant ADDRESS_CLIS_BNB_CONTRACT = keccak256(abi.encodePacked(STR_ADDRESS_CLIS_BNB));
+    bytes32 internal constant ADDRESS_HELIO_PROVIDER_CONTRACT = keccak256(abi.encodePacked(STR_ADDRESS_HELIO_PROVIDER));
+    bytes32 internal constant ADDRESS_STAKER_GATEWAY = keccak256(abi.encodePacked(STR_ADDRESS_STAKER_GATEWAY));
+    bytes32 internal constant ADDRESS_WBNB_CONTRACT = keccak256(abi.encodePacked(STR_ADDRESS_WBNB_CONTRACT));
 
     /* State variables **************************************************************************************************/
 

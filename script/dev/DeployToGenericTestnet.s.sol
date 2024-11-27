@@ -17,7 +17,7 @@ contract DeployToGenericTestnet is DeployProtocolAbstract {
         _startBroadcast();
 
         // deploy protocol
-        _deployProtocol(wbnbAddress, new address[](0), deployDemoTokens);
+        _deployProtocol(wbnbAddress, _getAdmin(), new address[](0), deployDemoTokens);
 
         // stop broadcast
         _stopBroadcast();

@@ -27,7 +27,7 @@ contract DeployKernelVaultBeacon is BaseScript {
 
         // deploy KernelVault Beacon
         console.log("##### KernalVault Beacon");
-        _deployKernelVaultUpgradeableBeacon(deployOutput);
+        _deployKernelVaultUpgradeableBeacon(deployOutput, _getAdmin());
 
         _stopBroadcast();
     }

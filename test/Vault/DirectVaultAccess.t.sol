@@ -31,7 +31,7 @@ contract DirectVaultAccessTest is BaseTest {
             _startPrank(user);
 
             _expectRevertWithUnauthorizedCaller(user);
-            vaultAssetA.withdraw(1 ether, address(vaultAssetA));
+            vaultAssetA.withdraw(1 ether, address(vaultAssetA), true);
         }
     }
 }

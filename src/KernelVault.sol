@@ -143,8 +143,17 @@ contract KernelVault is HasConfigUpgradeable, IKernelVault, KernelVaultStorage {
      * @notice Withdraw from the Vault
      * @param amount the amount to withdraw
      * @param owner the owner of the tokens
+     * @param approveSender if true, approve the sender (can be only StakerGateway) to transfer the tokens
      */
-    function withdraw(uint256 amount, address owner) external onlyFromStakerGateway onlyVaultsWithdrawNotPaused {
+    function withdraw(
+        uint256 amount,
+        address owner,
+        bool approveSender
+    )
+        external
+        onlyFromStakerGateway
+        onlyVaultsWithdrawNotPaused
+    {
         // check if owner's balance is sufficient
         require(amount <= _balanceOf(owner), WithdrawFailed("Not enough balance to withdraw"));
 
@@ -152,7 +161,9 @@ contract KernelVault is HasConfigUpgradeable, IKernelVault, KernelVaultStorage {
         balances[owner] -= amount;
 
         // update allowance of StakerGateway
-        SafeERC20.forceApprove(IERC20(asset), msg.sender, amount);
+        if (approveSender) {
+            SafeERC20.forceApprove(IERC20(asset), msg.sender, amount);
+        }
     }
 
     /* Private Functions ************************************************************************************************/
