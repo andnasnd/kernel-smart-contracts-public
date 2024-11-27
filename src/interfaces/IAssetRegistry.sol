@@ -22,7 +22,8 @@ interface IAssetRegistry {
     error VaultNotEmpty();
 
     /// Vault was not found
-    error VaultNotFound(string);
+    /// @param asset the asset address
+    error VaultNotFound(address asset);
 
     /* External Functions ***********************************************************************************************/
 

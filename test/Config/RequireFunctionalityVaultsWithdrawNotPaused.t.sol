@@ -13,9 +13,7 @@ contract RequireFunctionalityVaultsWithdrawNotPausedTest is BaseTest {
         config.pauseFunctionality("VAULTS_WITHDRAW");
 
         // revert
-        _expectRevertCustomErrorWithMessage(
-            IKernelConfig.FunctionalityIsPaused.selector, "Functionality VAULTS_WITHDRAW is paused"
-        );
+        _expectRevertCustomErrorWithMessage(IKernelConfig.FunctionalityIsPaused.selector, "VAULTS_WITHDRAW");
         config.requireFunctionalityVaultsWithdrawNotPaused();
     }
 }

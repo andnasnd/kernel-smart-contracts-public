@@ -53,7 +53,7 @@ contract SetAddressTest is BaseTest {
         for (uint256 i = 0; i < keys.length; i++) {
             string memory key = keys[i];
 
-            _expectRevertUnAuthorizedRole(users.alice, 0x00);
+            _expectRevertWithUnauthorizedRole(users.alice, 0x00);
 
             config.setAddress(key, demoAddress);
         }

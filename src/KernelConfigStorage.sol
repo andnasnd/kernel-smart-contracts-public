@@ -22,6 +22,16 @@ abstract contract KernelConfigStorage {
     /// Pause all Vaults withdraws
     bytes32 internal constant FUNCTIONALITY_VAULTS_WITHDRAW = keccak256("VAULTS_WITHDRAW");
 
+    /* Constants ********************************************************************************************************/
+
+    /// constant strings for each address
+    string internal constant STR_ASSET_REGISTRY = "ASSET_REGISTRY";
+    string internal constant STR_PROTOCOL = "PROTOCOL";
+    string internal constant STR_STAKER_GATEWAY = "STAKER_GATEWAY";
+    string internal constant STR_VAULTS_DEPOSIT = "VAULTS_DEPOSIT";
+    string internal constant STR_VAULTS_WITHDRAW = "VAULTS_WITHDRAW";
+    string internal constant STR_WBNB_CONTRACT = "WBNB_CONTRACT";
+
     /* Addresses ********************************************************************************************************/
 
     //
@@ -31,7 +41,7 @@ abstract contract KernelConfigStorage {
 
     /* State variables **************************************************************************************************/
 
-    /// generic mapping to store addresses used in the protocol)
+    /// generic mapping to store addresses used in the protocol
     mapping(bytes32 => address) internal addresses;
 
     /// store if a functionality is paused or not (using uint instead of bool)

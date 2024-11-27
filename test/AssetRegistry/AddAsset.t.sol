@@ -20,10 +20,7 @@ contract AddAssetTest is BaseTest {
         KernelVault vaultC = _deployKernelVault(asset, 101 ether);
 
         // reverts because asset has not been added yet
-        _expectRevertCustomErrorWithMessage(
-            IAssetRegistry.VaultNotFound.selector,
-            string.concat("Vault not found for asset ", Strings.toHexString(address(asset)))
-        );
+        _expectRevertWithVaultNotFound(address(asset));
         assetRegistry.getVault(address(asset));
 
         // add vault for asset

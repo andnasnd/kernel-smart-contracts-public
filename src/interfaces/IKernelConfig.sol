@@ -4,6 +4,13 @@ pragma solidity ^0.8.28;
 interface IKernelConfig {
     /* Events ***********************************************************************************************************/
 
+    // functionality has been paused
+    event FunctionalityPaused(string key);
+
+    // functionality has been unpaused
+    event FunctionalityUnpaused(string key);
+
+    // set contract to config
     event SetContract(string key, address addr);
 
     /* Errors ***********************************************************************************************************/
@@ -41,7 +48,7 @@ interface IKernelConfig {
 
     function initialize(address adminAddr, address wbnbAddress) external;
 
-    function isFunctionalityPaused(string calldata key) external view returns (bool);
+    function isFunctionalityPaused(string memory key, bool includeProtocol) external view returns (bool);
 
     function isProtocolPaused() external view returns (bool);
 

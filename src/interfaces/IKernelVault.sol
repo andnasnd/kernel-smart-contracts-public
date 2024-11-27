@@ -2,13 +2,23 @@
 pragma solidity ^0.8.28;
 
 interface IKernelVault {
+    /* Events ***********************************************************************************************************/
+
+    // Deposit Limit of vault has changed
+    event DepositLimitChanged(uint256 newLimit);
+
     /* Errors ***********************************************************************************************************/
 
     /// The Deposit failed
     error DepositFailed(string);
 
+    /// The Deposit failed because the limit was exceeded
+    /// @param depositAmount the amount to deposit
+    /// @param depositLimit the limit exceeded
+    error DepositLimitExceeded(uint256 depositAmount, uint256 depositLimit);
+
     /// A function was called by an unauthorized sender
-    error UnauthorizedCaller(string);
+    error UnauthorizedCaller(address);
 
     /// The withdraw failed
     error WithdrawFailed(string);
@@ -19,7 +29,7 @@ interface IKernelVault {
 
     function balanceOf(address address_) external view returns (uint256);
 
-    function deposit(uint256 vaultBalanceBefore, address owner) external;
+    function deposit(uint256 vaultBalanceBefore, address owner) external returns (uint256);
 
     function getAsset() external view returns (address);
 

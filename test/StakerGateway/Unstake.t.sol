@@ -69,9 +69,7 @@ contract UnstakeTest is BaseTest {
         _startPrank(users.alice);
 
         // expect revert when vault withdraw is paused
-        _expectRevertCustomErrorWithMessage(
-            IKernelConfig.FunctionalityIsPaused.selector, "Functionality VAULTS_WITHDRAW is paused"
-        );
+        _expectRevertCustomErrorWithMessage(IKernelConfig.FunctionalityIsPaused.selector, "VAULTS_WITHDRAW");
         stakerGateway.unstake(address(asset), amountToStake, "referral_id");
     }
 

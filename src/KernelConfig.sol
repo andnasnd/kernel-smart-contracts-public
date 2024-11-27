@@ -47,9 +47,9 @@ contract KernelConfig is AccessControlUpgradeable, UUPSUpgradeable, IKernelConfi
      * notice Returns true if every sensitive value has been configured and Config is production ready
      */
     function check() external view returns (bool) {
-        require(_getAddress("ASSET_REGISTRY") != address(0), NotStored("AssetRegistry address not set"));
-        require(_getAddress("STAKER_GATEWAY") != address(0), NotStored("StakerGateway address not set"));
-        require(_getAddress("WBNB_CONTRACT") != address(0), NotStored("WBNB address not set"));
+        require(_getAddress(STR_ASSET_REGISTRY) != address(0), NotStored("AssetRegistry address not set"));
+        require(_getAddress(STR_STAKER_GATEWAY) != address(0), NotStored("StakerGateway address not set"));
+        require(_getAddress(STR_WBNB_CONTRACT) != address(0), NotStored("WBNB address not set"));
 
         return true;
     }
@@ -58,21 +58,21 @@ contract KernelConfig is AccessControlUpgradeable, UUPSUpgradeable, IKernelConfi
      * @notice Returns the address of the AssetRegistry
      */
     function getAssetRegistry() external view returns (address) {
-        return _getAddress("ASSET_REGISTRY");
+        return _getAddress(STR_ASSET_REGISTRY);
     }
 
     /**
      * @notice Returns the address of the StakerGateway
      */
     function getStakerGateway() external view returns (address) {
-        return _getAddress("STAKER_GATEWAY");
+        return _getAddress(STR_STAKER_GATEWAY);
     }
 
     /**
      *  @notice Returns the address of the WBNB token
      */
     function getWBNBAddress() external view returns (address) {
-        return _getAddress("WBNB_CONTRACT");
+        return _getAddress(STR_WBNB_CONTRACT);
     }
 
     /**
@@ -87,13 +87,21 @@ contract KernelConfig is AccessControlUpgradeable, UUPSUpgradeable, IKernelConfi
         _grantRole(DEFAULT_ADMIN_ROLE, adminAddr);
 
         // set WBNB contract address
-        _setAddress("WBNB_CONTRACT", wbnbAddress);
+        _setAddress(STR_WBNB_CONTRACT, wbnbAddress);
     }
 
     /**
      * @notice Returns true if a functionality is paused
+     * @param key the functionality to check
+     * @param includeProtocol if true, it will consider also the protocol status; if false, it will ignore protocol
+     * status
      */
-    function isFunctionalityPaused(string memory key) external view returns (bool) {
+    function isFunctionalityPaused(string memory key, bool includeProtocol) external view returns (bool) {
+        // if protocol is paused, return true in any case
+        if (includeProtocol && _isFunctionalityPaused(STR_PROTOCOL)) {
+            return true;
+        }
+
         return _isFunctionalityPaused(key);
     }
 
@@ -101,7 +109,7 @@ contract KernelConfig is AccessControlUpgradeable, UUPSUpgradeable, IKernelConfi
      * @notice Returns true if the protocol is paused
      */
     function isProtocolPaused() external view returns (bool) {
-        return _isFunctionalityPaused("PROTOCOL");
+        return _isFunctionalityPaused(STR_PROTOCOL);
     }
 
     /**
@@ -121,7 +129,7 @@ contract KernelConfig is AccessControlUpgradeable, UUPSUpgradeable, IKernelConfi
         _requireProtocolNotPaused();
 
         // check if functionality is paused
-        _requireFunctionalityNotPaused("VAULTS_DEPOSIT");
+        _requireFunctionalityNotPaused(STR_VAULTS_DEPOSIT);
     }
 
     /**
@@ -132,7 +140,7 @@ contract KernelConfig is AccessControlUpgradeable, UUPSUpgradeable, IKernelConfi
         _requireProtocolNotPaused();
 
         // check if functionality is paused
-        _requireFunctionalityNotPaused("VAULTS_WITHDRAW");
+        _requireFunctionalityNotPaused(STR_VAULTS_WITHDRAW);
     }
 
     /**
@@ -265,7 +273,7 @@ contract KernelConfig is AccessControlUpgradeable, UUPSUpgradeable, IKernelConfi
      * @notice Reverts if functionality is paused
      */
     function _requireFunctionalityNotPaused(string memory key) private view {
-        require(!_isFunctionalityPaused(key), FunctionalityIsPaused(string.concat("Functionality ", key, " is paused")));
+        require(!_isFunctionalityPaused(key), FunctionalityIsPaused(key));
     }
 
     /**
@@ -284,7 +292,7 @@ contract KernelConfig is AccessControlUpgradeable, UUPSUpgradeable, IKernelConfi
      * @notice Reverts if protocol is paused
      */
     function _requireProtocolNotPaused() private view {
-        require(!_isFunctionalityPaused("PROTOCOL"), ProtocolIsPaused());
+        require(!_isFunctionalityPaused(STR_PROTOCOL), ProtocolIsPaused());
     }
 
     /**
@@ -326,5 +334,12 @@ contract KernelConfig is AccessControlUpgradeable, UUPSUpgradeable, IKernelConfi
 
         // pause or unpause
         functionalityIsPaused[keccak256(abi.encodePacked(key))] = newStatus;
+
+        // emit events
+        if (isPaused) {
+            emit FunctionalityPaused(key);
+        } else {
+            emit FunctionalityUnpaused(key);
+        }
     }
 }

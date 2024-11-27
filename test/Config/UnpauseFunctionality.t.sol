@@ -11,12 +11,12 @@ contract UnpauseFunctionalityTest is BaseTest {
         // pause
         _startPrank(users.pauser);
         config.pauseFunctionality("VAULTS_DEPOSIT");
-        assertTrue(config.isFunctionalityPaused("VAULTS_DEPOSIT"));
+        assertTrue(config.isFunctionalityPaused("VAULTS_DEPOSIT", false));
 
         // unpause
         _startPrank(users.admin);
         config.unpauseFunctionality("VAULTS_DEPOSIT");
-        assertFalse(config.isFunctionalityPaused("VAULTS_DEPOSIT"));
+        assertFalse(config.isFunctionalityPaused("VAULTS_DEPOSIT", false));
     }
 
     /// expect revert config.unpauseFunctionality() if user has not the right role
@@ -24,7 +24,7 @@ contract UnpauseFunctionalityTest is BaseTest {
         _startPrank(users.alice);
 
         // expect revert
-        _expectRevertUnAuthorizedRole(users.alice, 0x00);
+        _expectRevertWithUnauthorizedRole(users.alice, 0x00);
 
         config.unpauseFunctionality("VAULTS_DEPOSIT");
     }

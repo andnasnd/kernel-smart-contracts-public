@@ -10,12 +10,14 @@ contract UnpauseProtocolTest is BaseTest {
         // pause
         _startPrank(users.pauser);
         config.pauseFunctionality("PROTOCOL");
-        assertTrue(config.isFunctionalityPaused("PROTOCOL"));
+        assertTrue(config.isFunctionalityPaused("PROTOCOL", false));
+        assertTrue(config.isProtocolPaused());
 
         // unpause
         _startPrank(users.admin);
         config.unpauseFunctionality("PROTOCOL");
-        assertFalse(config.isFunctionalityPaused("PROTOCOL"));
+        assertFalse(config.isFunctionalityPaused("PROTOCOL", false));
+        assertFalse(config.isProtocolPaused());
     }
 
     /// expect revert if user has not the right role
@@ -24,7 +26,7 @@ contract UnpauseProtocolTest is BaseTest {
         _startPrank(users.alice);
 
         // expect revert
-        _expectRevertUnAuthorizedRole(users.alice, 0x00);
+        _expectRevertWithUnauthorizedRole(users.alice, 0x00);
 
         config.unpauseFunctionality("PROTOCOL");
     }

@@ -3,8 +3,6 @@ pragma solidity ^0.8.28;
 
 import { BaseTest } from "test/BaseTest.sol";
 import { KernelVault } from "src/KernelVault.sol";
-import { IKernelVault } from "src/interfaces/IKernelVault.sol";
-import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
 contract DirectVaultAccessTest is BaseTest {
     /// Expect revert when calling deposit() not from StakerGateway
@@ -17,10 +15,7 @@ contract DirectVaultAccessTest is BaseTest {
 
             _startPrank(user);
 
-            _expectRevertCustomErrorWithMessage(
-                IKernelVault.UnauthorizedCaller.selector,
-                string.concat("Sender ", Strings.toHexString(user), " is not an authorized caller")
-            );
+            _expectRevertWithUnauthorizedCaller(user);
             vaultAssetA.deposit(1 ether, address(vaultAssetA));
         }
     }
@@ -35,10 +30,7 @@ contract DirectVaultAccessTest is BaseTest {
 
             _startPrank(user);
 
-            _expectRevertCustomErrorWithMessage(
-                IKernelVault.UnauthorizedCaller.selector,
-                string.concat("Sender ", Strings.toHexString(user), " is not an authorized caller")
-            );
+            _expectRevertWithUnauthorizedCaller(user);
             vaultAssetA.withdraw(1 ether, address(vaultAssetA));
         }
     }

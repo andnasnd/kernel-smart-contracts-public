@@ -86,7 +86,7 @@ contract StakerGateway is
      * @notice Returns the address of the Vault for an asset
      */
     function getVault(address asset) external view returns (address) {
-        return address(_getVaultForAssetAddress(asset));
+        return _getVaultAddressForAssetAddress(asset);
     }
 
     /**
@@ -208,20 +208,18 @@ contract StakerGateway is
     function _stake(address asset, address source, uint256 amount, string calldata referralId) private {
         IERC20 asset_ = IERC20(asset);
 
-        address assetAddress = address(asset);
-
         // get vault balance
-        IKernelVault vault = _getVaultForAssetAddress(assetAddress);
+        IKernelVault vault = _getVaultForAssetAddress(asset);
         uint256 vaultBalance = vault.balance();
 
         // transfer tokens to Vault
         SafeERC20.safeTransferFrom(asset_, source, address(vault), amount);
 
         // register deposit into Vault
-        vault.deposit(vaultBalance, msg.sender);
+        uint256 depositAmount = vault.deposit(vaultBalance, msg.sender);
 
         // emit event
-        emit AssetStaked(msg.sender, assetAddress, amount, referralId);
+        emit AssetStaked(msg.sender, asset, depositAmount, referralId);
     }
 
     /**

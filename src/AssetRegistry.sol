@@ -2,7 +2,6 @@
 pragma solidity ^0.8.28;
 
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
 import { AssetRegistryStorage } from "src/AssetRegistryStorage.sol";
 import { HasConfigUpgradeable } from "src/HasConfigUpgradeable.sol";
@@ -54,7 +53,7 @@ contract AssetRegistry is UUPSUpgradeable, HasConfigUpgradeable, IAssetRegistry,
         assetToVault[asset] = vault;
 
         // update assets
-        assets = AddressHelper.pushToFixedLengthAddressesArray(assets, asset);
+        assets.push(asset);
 
         // emit event
         emit AssetAdded(asset, vault);
@@ -125,7 +124,7 @@ contract AssetRegistry is UUPSUpgradeable, HasConfigUpgradeable, IAssetRegistry,
         delete assetToVault[asset];
 
         // update assets
-        assets = AddressHelper.removeFromFixedLengthAddressesArray(assets, asset);
+        AddressHelper.removeAddressFromArray(assets, asset);
 
         // emit event
         emit AssetRemoved(asset, vault);
@@ -151,10 +150,7 @@ contract AssetRegistry is UUPSUpgradeable, HasConfigUpgradeable, IAssetRegistry,
         address vault = assetToVault[asset];
 
         // check vault exists
-        require(
-            address(vault) != address(0),
-            VaultNotFound(string.concat("Vault not found for asset ", Strings.toHexString(asset)))
-        );
+        require(address(vault) != address(0), VaultNotFound(asset));
 
         return IKernelVault(vault);
     }

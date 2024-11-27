@@ -50,6 +50,7 @@ abstract contract DeployProtocolAbstract is BaseScript {
         //
         deployOutput.config.setAddress("STAKER_GATEWAY", address(deployOutput.stakerGateway));
 
+        console.log("##### Vaults");
         // deploy Vaults UpgradeableBeacon
         _deployKernelVaultUpgradeableBeacon(deployOutput);
 
@@ -67,12 +68,12 @@ abstract contract DeployProtocolAbstract is BaseScript {
         // deploy pre-existing erc20 token vaults
         for (uint256 i = 0; i < erc20Tokens.length; i++) {
             KernelVault vault = _deployKernelVaultAndAddToAssetRegistry(deployOutput, ERC20Demo(erc20Tokens[i]));
-            vault.setDepositLimit(500 ether);
+            // vault.setDepositLimit(500 ether);
         }
 
         // deploy WBNB vault to support native BNB
         KernelVault vaultWBNB = _deployKernelVaultAndAddToAssetRegistry(deployOutput, ERC20Demo(wbnbAddress));
-        vaultWBNB.setDepositLimit(500 ether);
+        // vaultWBNB.setDepositLimit(500 ether);
 
         //
         console.log("");

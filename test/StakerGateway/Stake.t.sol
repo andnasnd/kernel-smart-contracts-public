@@ -7,7 +7,6 @@ import { BaseTest } from "test/BaseTest.sol";
 import { IERC20Demo } from "test/mock/IERC20Demo.sol";
 import { ERC20WithTranferTaxDemo } from "test/mock/ERC20WithTranferTaxDemo.sol";
 import { KernelVault } from "src/KernelVault.sol";
-import { IAssetRegistry } from "src/interfaces/IAssetRegistry.sol";
 import { IStakerGateway } from "src/interfaces/IStakerGateway.sol";
 import { IKernelVault } from "src/interfaces/IKernelVault.sol";
 import { IKernelConfig } from "src/interfaces/IKernelConfig.sol";
@@ -118,10 +117,7 @@ contract StakeTest is BaseTest {
         asset.approve(address(stakerGateway), amountToStake);
 
         // stake
-        _expectRevertCustomErrorWithMessage(
-            IAssetRegistry.VaultNotFound.selector,
-            string.concat("Vault not found for asset ", Strings.toHexString(address(asset)))
-        );
+        _expectRevertWithVaultNotFound(address(asset));
         stakerGateway.stake(address(asset), amountToStake, "referral_id");
     }
 
@@ -146,16 +142,7 @@ contract StakeTest is BaseTest {
         asset.approve(address(stakerGateway), amountToStake);
 
         // stake
-        _expectRevertCustomErrorWithMessage(
-            IKernelVault.DepositFailed.selector,
-            string.concat(
-                "Unable to deposit an amount of ",
-                Strings.toString(amountToStake),
-                ": limit of ",
-                Strings.toString(vault.getDepositLimit()),
-                " exceeded"
-            )
-        );
+        _expectRevertWithDepositLimitExceeded(amountToStake, vault.getDepositLimit());
         stakerGateway.stake(address(asset), amountToStake, "referral_id");
     }
 
@@ -176,9 +163,7 @@ contract StakeTest is BaseTest {
         asset.approve(address(stakerGateway), amountToStake);
 
         // expect revert when vault deposit is paused
-        _expectRevertCustomErrorWithMessage(
-            IKernelConfig.FunctionalityIsPaused.selector, "Functionality VAULTS_DEPOSIT is paused"
-        );
+        _expectRevertCustomErrorWithMessage(IKernelConfig.FunctionalityIsPaused.selector, "VAULTS_DEPOSIT");
         stakerGateway.stake(address(asset), amountToStake, "referral_id");
     }
 

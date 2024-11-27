@@ -129,11 +129,6 @@ abstract contract BaseScript is Script {
             "KernelConfig.sol", abi.encodeCall(IKernelConfig.initialize, (_getDeployer(), wbnbAddress))
         );
 
-        // log
-        console.log(string.concat("  role DEFAULT_ADMIN_ROLE to: ", Strings.toHexString(_getAdmin())));
-        console.log(string.concat("  role ROLE_MANAGER to:       ", Strings.toHexString(_getManager())));
-        console.log(string.concat("  role ROLE_PAUSER to:        ", Strings.toHexString(_getPauser())));
-
         //
         deployOutput.config = KernelConfig(address(proxy));
     }

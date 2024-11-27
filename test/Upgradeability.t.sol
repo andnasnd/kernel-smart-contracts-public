@@ -30,7 +30,7 @@ contract UpgradeabilityTest is BaseTest {
         // // try to upgrade without permission
         // _startPrank(users.alice);
 
-        // // try _expectRevertUnAuthorizedRole(users.alice, config.DEFAULT_ADMIN_ROLE());
+        // // try _expectRevertWithUnauthorizedRole(users.alice, config.DEFAULT_ADMIN_ROLE());
         // vm.expectRevert();
         // _upgradeProxy(proxyAddr, contractName, referenceContract);
         // >>> TODO

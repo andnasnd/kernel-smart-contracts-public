@@ -100,3 +100,9 @@ The contract allows pausing of `Deposits to all Vaults` or `Withdrawals from all
 - **Admin**: Manages roles and perform critical tasks
 - **Manager**: Responsible for managing system configurations, such as adding vaults and assets
 - **Pauser**: Has the ability to pause the entire protocol or some specific features like deposit and withdrawa in case of emergency
+
+
+# Deployed contracts
+Kernel Protocol Mainnet Addresses can be found [here](doc/contract-address/Mainnet.md)
+Kernel Protocol Testnet Addresses can be found [here](doc/contract-address/Testnet.md)
+

@@ -13,9 +13,7 @@ contract RequireFunctionalityVaultsDepositNotPausedTest is BaseTest {
         config.pauseFunctionality("VAULTS_DEPOSIT");
 
         // revert
-        _expectRevertCustomErrorWithMessage(
-            IKernelConfig.FunctionalityIsPaused.selector, "Functionality VAULTS_DEPOSIT is paused"
-        );
+        _expectRevertCustomErrorWithMessage(IKernelConfig.FunctionalityIsPaused.selector, "VAULTS_DEPOSIT");
         config.requireFunctionalityVaultsDepositNotPaused();
     }
 }

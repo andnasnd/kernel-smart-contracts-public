@@ -24,10 +24,7 @@ contract RemoveAssetTest is BaseTest {
         assetRegistry.removeAsset(asset);
 
         // reverts because asset doesn't exist anymore
-        _expectRevertCustomErrorWithMessage(
-            IAssetRegistry.VaultNotFound.selector,
-            string.concat("Vault not found for asset ", Strings.toHexString(address(asset)))
-        );
+        _expectRevertWithVaultNotFound(address(asset));
         assetRegistry.getVault(asset);
     }
 

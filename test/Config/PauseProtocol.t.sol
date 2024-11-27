@@ -9,14 +9,14 @@ contract PauseProtocolTest is BaseTest {
     function test_PauseProtocol() public {
         // User with pause access
         _startPrank(users.pauser);
-        assertFalse(config.isFunctionalityPaused("PROTOCOL"));
+        assertFalse(config.isFunctionalityPaused("PROTOCOL", false));
         assertFalse(config.isProtocolPaused());
 
         // pause protocol
         config.pauseFunctionality("PROTOCOL");
 
         // assert
-        assertTrue(config.isFunctionalityPaused("PROTOCOL"));
+        assertTrue(config.isFunctionalityPaused("PROTOCOL", false));
         assertTrue(config.isProtocolPaused());
     }
 
@@ -25,7 +25,7 @@ contract PauseProtocolTest is BaseTest {
         // bob doesn't have pause access
         _startPrank(users.bob);
 
-        _expectRevertUnAuthorizedRole(users.bob, config.ROLE_PAUSER());
+        _expectRevertWithUnauthorizedRole(users.bob, config.ROLE_PAUSER());
 
         // pause protocol
         config.pauseFunctionality("PROTOCOL");

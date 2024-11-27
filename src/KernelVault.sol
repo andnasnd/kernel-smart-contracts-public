@@ -21,12 +21,7 @@ contract KernelVault is HasConfigUpgradeable, IKernelVault, KernelVaultStorage {
 
     /// @notice Reverts if sender is not the StakerGateway
     modifier onlyFromStakerGateway() {
-        require(
-            msg.sender == _config().getStakerGateway(),
-            UnauthorizedCaller(
-                string.concat("Sender ", Strings.toHexString(msg.sender), " is not an authorized caller")
-            )
-        );
+        require(msg.sender == _config().getStakerGateway(), UnauthorizedCaller(msg.sender));
         _;
     }
 
@@ -85,33 +80,27 @@ contract KernelVault is HasConfigUpgradeable, IKernelVault, KernelVaultStorage {
         external
         onlyFromStakerGateway
         onlyVaultsDepositNotPaused
+        returns (uint256)
     {
-        uint256 depositAmount = _balance() - vaultBalanceBefore;
+        uint256 vaultBalance = _balance();
+        uint256 depositAmount = vaultBalance - vaultBalanceBefore;
         require(depositAmount > 0, DepositFailed("Tokens were not transferred to Vault before calling deposit()"));
 
         // check if deposit limit is exceeded
-        require(
-            _balance() <= depositLimit,
-            DepositFailed(
-                string.concat(
-                    "Unable to deposit an amount of ",
-                    Strings.toString(depositAmount),
-                    ": limit of ",
-                    Strings.toString(depositLimit),
-                    " exceeded"
-                )
-            )
-        );
+        require(vaultBalance <= depositLimit, DepositLimitExceeded(depositAmount, depositLimit));
 
         // update balance
         balances[owner] += depositAmount;
+
+        // return deposited amount
+        return depositAmount;
     }
 
     /**
      * @notice Returns the address of the asset managed by this vault
      */
     function getAsset() external view returns (address) {
-        return address(asset);
+        return asset;
     }
 
     /**
@@ -146,6 +135,8 @@ contract KernelVault is HasConfigUpgradeable, IKernelVault, KernelVaultStorage {
      */
     function setDepositLimit(uint256 limit) external onlyManager {
         depositLimit = limit;
+
+        emit DepositLimitChanged(limit);
     }
 
     /**
@@ -154,8 +145,6 @@ contract KernelVault is HasConfigUpgradeable, IKernelVault, KernelVaultStorage {
      * @param owner the owner of the tokens
      */
     function withdraw(uint256 amount, address owner) external onlyFromStakerGateway onlyVaultsWithdrawNotPaused {
-        address stakerGateway = _config().getStakerGateway();
-
         // check if owner's balance is sufficient
         require(amount <= _balanceOf(owner), WithdrawFailed("Not enough balance to withdraw"));
 
@@ -163,7 +152,7 @@ contract KernelVault is HasConfigUpgradeable, IKernelVault, KernelVaultStorage {
         balances[owner] -= amount;
 
         // update allowance of StakerGateway
-        SafeERC20.forceApprove(IERC20(asset), stakerGateway, amount);
+        SafeERC20.forceApprove(IERC20(asset), msg.sender, amount);
     }
 
     /* Private Functions ************************************************************************************************/

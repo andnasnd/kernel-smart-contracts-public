@@ -459,8 +459,23 @@ abstract contract BaseTest is Test {
     }
 
     ///
-    function _expectRevertUnAuthorizedRole(address user, bytes32 role) internal {
+    function _expectRevertWithDepositLimitExceeded(uint256 depositAmount, uint256 depositLimit) internal {
+        vm.expectRevert(abi.encodeWithSelector(IKernelVault.DepositLimitExceeded.selector, depositAmount, depositLimit));
+    }
+
+    ///
+    function _expectRevertWithUnauthorizedCaller(address caller) internal {
+        vm.expectRevert(abi.encodeWithSelector(IKernelVault.UnauthorizedCaller.selector, caller));
+    }
+
+    ///
+    function _expectRevertWithUnauthorizedRole(address user, bytes32 role) internal {
         vm.expectRevert(abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, role));
+    }
+
+    ///
+    function _expectRevertWithVaultNotFound(address asset) internal {
+        vm.expectRevert(abi.encodeWithSelector(IAssetRegistry.VaultNotFound.selector, asset));
     }
 
     ///

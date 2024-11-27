@@ -11,12 +11,12 @@ import { BaseTest } from "test/BaseTest.sol";
 contract PauseFunctionalityTest is BaseTest {
     ///
     function test_PauseFunctionality() public {
-        assertFalse(config.isFunctionalityPaused("VAULTS_DEPOSIT"));
+        assertFalse(config.isFunctionalityPaused("VAULTS_DEPOSIT", false));
 
         //
         _startPrank(users.pauser);
         config.pauseFunctionality("VAULTS_DEPOSIT");
-        assertTrue(config.isFunctionalityPaused("VAULTS_DEPOSIT"));
+        assertTrue(config.isFunctionalityPaused("VAULTS_DEPOSIT", false));
     }
 
     /// expect revert config.pauseFunctionality() if user has not the right role
@@ -25,7 +25,7 @@ contract PauseFunctionalityTest is BaseTest {
         _startPrank(users.bob);
 
         // expect revert
-        _expectRevertUnAuthorizedRole(users.bob, config.ROLE_PAUSER());
+        _expectRevertWithUnauthorizedRole(users.bob, config.ROLE_PAUSER());
 
         config.pauseFunctionality("VAULTS_DEPOSIT");
     }
