@@ -31,5 +31,5 @@ interface IKernelVault {
 
     function setDepositLimit(uint256 limit) external;
 
-    function withdraw(uint256 amount, address owner, bool requireApprove) external;
+    function withdraw(uint256 amount, address owner) external;
 }

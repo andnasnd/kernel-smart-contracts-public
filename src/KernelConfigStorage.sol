@@ -26,8 +26,6 @@ abstract contract KernelConfigStorage {
 
     //
     bytes32 internal constant ADDRESS_ASSET_REGISTRY = keccak256("ASSET_REGISTRY");
-    bytes32 internal constant ADDRESS_CLIS_BNB_CONTRACT = keccak256("CLIS_BNB_CONTRACT");
-    bytes32 internal constant ADDRESS_HELIO_PROVIDER_CONTRACT = keccak256("HELIO_PROVIDER_CONTRACT");
     bytes32 internal constant ADDRESS_STAKER_GATEWAY = keccak256("STAKER_GATEWAY");
     bytes32 internal constant ADDRESS_WBNB_CONTRACT = keccak256("WBNB_CONTRACT");
 

@@ -8,19 +8,22 @@ import { console } from "forge-std/Script.sol";
 
 import { KernelVault } from "src/KernelVault.sol";
 
-abstract contract DeployToTestnetAbstract is BaseScript {
+abstract contract DeployProtocolAbstract is BaseScript {
     /**
      * @notice Deploy the whole protocl in testnet, including mock ERC20 tokens
      * @param wbnbAddress mandatory, address of the WBNB contract to support native staking/unstaking
      * @param erc20Tokens pre-existing ERC20 tokens to add in the asset registry
+     * @param deployDemoTokens if true, deploy demo ERC20 tokens
      */
-    function _deploy(address wbnbAddress, address[] memory erc20Tokens) internal {
+    function _deployProtocol(
+        address wbnbAddress,
+        address[] memory erc20Tokens,
+        bool deployDemoTokens
+    )
+        internal
+        returns (DeployOutput memory)
+    {
         require(wbnbAddress != address(0), "WBNB address is mandatory");
-
-        bool deployDemoTokens = vm.parseBool(vm.prompt("Deploy demo tokens? [true/false]"));
-
-        // start broadcast
-        _startBroadcast();
 
         //
         DeployOutput memory deployOutput;
@@ -29,7 +32,6 @@ abstract contract DeployToTestnetAbstract is BaseScript {
         _printUsersDebug();
 
         // deploy config
-        console.log("##### Config");
         _deployConfig(deployOutput, wbnbAddress);
 
         // temporarily grant roles to deployer
@@ -37,14 +39,12 @@ abstract contract DeployToTestnetAbstract is BaseScript {
         deployOutput.config.grantRole(deployOutput.config.ROLE_PAUSER(), _getDeployer());
 
         // deploy asset registry
-        console.log("##### Asset Registry");
         _deployAssetRegistry(deployOutput);
 
         // set AssetRegistry address in config
         deployOutput.config.setAddress("ASSET_REGISTRY", address(deployOutput.assetRegistry));
 
         // deploy staker gateway
-        console.log("##### StakerGateway");
         _deployStakerGateway(deployOutput);
 
         //
@@ -53,13 +53,14 @@ abstract contract DeployToTestnetAbstract is BaseScript {
         // deploy Vaults UpgradeableBeacon
         _deployKernelVaultUpgradeableBeacon(deployOutput);
 
+        // (optionally) deploy ERC20 demo tokens
         if (deployDemoTokens) {
-            // deploy ERC20 demo tokens
-            console.log("##### Vaults and ERC20 tokens");
-            KernelVault vaultA = _deployERC20DemoToken(deployOutput, "A");
+            console.log("");
+            console.log("##### ERC20 Demo tokens and relative Vaults");
+            KernelVault vaultA = _deployERC20DemoTokenAndAddVaultTOAssetRegistry(deployOutput, "A");
             vaultA.setDepositLimit(100 ether);
 
-            KernelVault vaultB = _deployERC20DemoToken(deployOutput, "B");
+            KernelVault vaultB = _deployERC20DemoTokenAndAddVaultTOAssetRegistry(deployOutput, "B");
             vaultB.setDepositLimit(100 ether);
         }
 
@@ -69,13 +70,27 @@ abstract contract DeployToTestnetAbstract is BaseScript {
             vault.setDepositLimit(500 ether);
         }
 
-        // deploy wbnb vault to support native BNB
+        // deploy WBNB vault to support native BNB
         KernelVault vaultWBNB = _deployKernelVaultAndAddToAssetRegistry(deployOutput, ERC20Demo(wbnbAddress));
         vaultWBNB.setDepositLimit(500 ether);
 
+        //
         console.log("");
 
         // grant definitive roles
+        _grantDefinitiveRoles(deployOutput);
+
+        // check config
+        console.log("");
+        console.log(" ##### CONFIG CHECK: ", deployOutput.config.check());
+
+        // return
+        return deployOutput;
+    }
+
+    /// @notice Grant roles defined in .env
+    /// @dev Override if necessary, remember that the deployer was granted with all the roles
+    function _grantDefinitiveRoles(DeployOutput memory deployOutput) internal virtual {
         if (_getDeployer() != _getManager()) {
             deployOutput.config.grantRole(deployOutput.config.ROLE_MANAGER(), _getManager());
             deployOutput.config.revokeRole(deployOutput.config.ROLE_MANAGER(), _getDeployer());
@@ -86,15 +101,15 @@ abstract contract DeployToTestnetAbstract is BaseScript {
             deployOutput.config.revokeRole(deployOutput.config.ROLE_PAUSER(), _getDeployer());
         }
 
+        // role UPGRADER is not granted to anyone
+        // if (_getDeployer() != _getUpgrader()) {
+        //     deployOutput.config.grantRole(deployOutput.config.ROLE_UPGRADER(), _getUpgrader());
+        //     deployOutput.config.revokeRole(deployOutput.config.ROLE_UPGRADER(), _getDeployer());
+        // }
+
         if (_getDeployer() != _getAdmin()) {
             deployOutput.config.grantRole(deployOutput.config.DEFAULT_ADMIN_ROLE(), _getAdmin());
             deployOutput.config.revokeRole(deployOutput.config.DEFAULT_ADMIN_ROLE(), _getDeployer());
         }
-
-        _stopBroadcast();
-
-        // check config
-        console.log("");
-        console.log("CONFIG CHECK: ", deployOutput.config.check());
     }
 }

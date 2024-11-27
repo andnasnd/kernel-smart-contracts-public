@@ -27,7 +27,6 @@ contract DeployStakerGateway is BaseScript {
         _printUsersDebug();
 
         // deploy StakerGateway
-        console.log("##### StakerGateway");
         _deployStakerGateway(deployOutput);
 
         _stopBroadcast();

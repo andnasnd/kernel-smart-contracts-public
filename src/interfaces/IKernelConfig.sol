@@ -35,10 +35,6 @@ interface IKernelConfig {
 
     function getAssetRegistry() external view returns (address);
 
-    function getClisBnbAddress() external view returns (address);
-
-    function getHelioProviderAddress() external view returns (address);
-
     function getStakerGateway() external view returns (address);
 
     function getWBNBAddress() external view returns (address);

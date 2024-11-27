@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
+import { TimelockController } from "@openzeppelin/contracts/governance/TimelockController.sol";
 import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
@@ -9,6 +10,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { Upgrades } from "@openzeppelin/upgrades/Upgrades.sol";
 
+import { AddressUtils } from "extra/AddressUtils.sol";
 import { AssetRegistry } from "src/AssetRegistry.sol";
 import { KernelConfig } from "src/KernelConfig.sol";
 import { KernelVault } from "src/KernelVault.sol";
@@ -91,10 +93,18 @@ abstract contract BaseScript is Script {
         return vm.envAddress("PAUSER_ADDRESS");
     }
 
+    ///
+    function _getUpgrader() internal view returns (address) {
+        return vm.envAddress("UPGRADER_ADDRESS");
+    }
+
     /* Deploy ***********************************************************************************************************/
 
     /// Deploy AssetRegistry
     function _deployAssetRegistry(DeployOutput memory deployOutput) internal requiresDeployedConfig(deployOutput) {
+        console.log("");
+        console.log("##### Asset Registry");
+
         // deploy proxy
         ERC1967Proxy proxy = _deployUUPSProxy(
             "AssetRegistry.sol", abi.encodeCall(IAssetRegistry.initialize, (address(deployOutput.config)))
@@ -111,6 +121,9 @@ abstract contract BaseScript is Script {
 
     /// Deploy Config
     function _deployConfig(DeployOutput memory deployOutput, address wbnbAddress) internal {
+        console.log("");
+        console.log("##### Config");
+
         // deploy proxy
         ERC1967Proxy proxy = _deployUUPSProxy(
             "KernelConfig.sol", abi.encodeCall(IKernelConfig.initialize, (_getDeployer(), wbnbAddress))
@@ -120,14 +133,18 @@ abstract contract BaseScript is Script {
         console.log(string.concat("  role DEFAULT_ADMIN_ROLE to: ", Strings.toHexString(_getAdmin())));
         console.log(string.concat("  role ROLE_MANAGER to:       ", Strings.toHexString(_getManager())));
         console.log(string.concat("  role ROLE_PAUSER to:        ", Strings.toHexString(_getPauser())));
-        console.log("");
 
         //
         deployOutput.config = KernelConfig(address(proxy));
     }
 
     /// Deploy a demo ERC20 token
-    function _deployERC20DemoToken(
+    function _deployERC20DemoToken(string memory symbol) internal returns (ERC20Demo) {
+        return new ERC20Demo(symbol, symbol);
+    }
+
+    /// Deploy a demo ERC20 token, deploy the Vault and add it to kernel
+    function _deployERC20DemoTokenAndAddVaultTOAssetRegistry(
         DeployOutput memory deployOutput,
         string memory symbol
     )
@@ -135,23 +152,26 @@ abstract contract BaseScript is Script {
         returns (KernelVault)
     {
         // deploy token
-        ERC20Demo token = new ERC20Demo(symbol, symbol);
+        ERC20Demo token = _deployERC20DemoToken(symbol);
 
         //
         return _onERC20DemoDeploy(deployOutput, token);
     }
 
     /// Deploy a demo WBNB token
-    function _deployMockWBNB(DeployOutput memory deployOutput) internal returns (KernelVault) {
+    function _deployMockWBNB() internal returns (address) {
         // deploy token
         WBNB token = new WBNB();
 
         //
-        return _onERC20DemoDeploy(deployOutput, ERC20Demo(address(token)));
+        return address(token);
     }
 
     /// Deploy StakerGateway
     function _deployStakerGateway(DeployOutput memory deployOutput) internal requiresDeployedConfig(deployOutput) {
+        console.log("");
+        console.log("##### StakerGateway");
+
         // deploy proxy
         ERC1967Proxy proxy = _deployUUPSProxy(
             "StakerGateway.sol", abi.encodeCall(IStakerGateway.initialize, (address(deployOutput.config)))
@@ -175,7 +195,6 @@ abstract contract BaseScript is Script {
         // log
         console.log("  UUPS proxy:     ", proxyAddr);
         console.log("  implementation: ", _getProxyImplementation(proxy));
-        console.log("");
 
         //
         return proxy;
@@ -201,6 +220,7 @@ abstract contract BaseScript is Script {
         KernelVault vault = KernelVault(address(proxy));
 
         //
+        console.log("");
         console.log("  Vault (beacon Proxy)");
         console.log(
             "    for token:      ",
@@ -208,7 +228,6 @@ abstract contract BaseScript is Script {
         );
         console.log("    proxy:          ", address(proxy));
         console.log("    implementation: ", address(deployOutput.vaultUpgradeableBeacon.implementation()));
-        console.log("");
 
         return vault;
     }
@@ -239,15 +258,32 @@ abstract contract BaseScript is Script {
         address upgradeableBeaconAddress = Upgrades.deployBeacon("KernelVault.sol:KernelVault", _getAdmin());
 
         // log
+        console.log("");
         console.log("  Vault UpgradeableBeacon");
         console.log("    UpgradeableBeacon deployed at:          ", upgradeableBeaconAddress);
         console.log(
             "    KernelVault implementation deployed at: ", UpgradeableBeacon(upgradeableBeaconAddress).implementation()
         );
-        console.log("");
 
         //
         deployOutput.vaultUpgradeableBeacon = UpgradeableBeacon(upgradeableBeaconAddress);
+    }
+
+    /// @notice Deploy a TimelockController contract
+    /// @param proposers array of addresses with PROPOSER_ROLE that can propose scheduled transactions
+    function _deployTimelockController(address[] memory proposers, uint256 time) public returns (TimelockController) {
+        console.log("");
+        console.log(" ##### DEPLOY TIMELOCK");
+
+        // anyone can execute
+        address[] memory executors = AddressUtils._buildArray1(address(0));
+
+        // deploy Timelock
+        TimelockController timelock = new TimelockController(time, proposers, executors, address(0));
+
+        console.log("  Timelock deployed at: ", address(timelock));
+
+        return timelock;
     }
 
     ///
@@ -259,7 +295,6 @@ abstract contract BaseScript is Script {
     function _onERC20DemoDeploy(DeployOutput memory deployOutput, ERC20Demo token) internal returns (KernelVault) {
         // log
         console.log(string.concat("  Deployed demo ERC20 token \"", token.symbol(), "\" at "), address(token));
-        console.log("");
 
         // deploy Vault
         return _deployKernelVaultAndAddToAssetRegistry(deployOutput, token);
@@ -272,12 +307,12 @@ abstract contract BaseScript is Script {
 
     ///
     function _printUsersDebug() internal {
+        console.log("");
         console.log("##### Users");
         _printDebugAddress("Deployer", _getDeployer());
         _printDebugAddress("Admin", _getAdmin());
         _printDebugAddress("Manager", _getManager());
         _printDebugAddress("Pauser", _getPauser());
-        console.log("");
     }
 
     ///

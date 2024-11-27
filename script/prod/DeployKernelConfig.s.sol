@@ -27,7 +27,6 @@ contract DeployKernelConfig is BaseScript {
         _printUsersDebug();
 
         // deploy KernelConfig
-        console.log("##### Config");
         _deployConfig(deployOutput, WBNB_ADDRESS);
 
         // grant definitive roles

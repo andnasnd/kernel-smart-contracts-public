@@ -62,20 +62,6 @@ contract KernelConfig is AccessControlUpgradeable, UUPSUpgradeable, IKernelConfi
     }
 
     /**
-     * @notice Returns the address of the CLIS BNB contract
-     */
-    function getClisBnbAddress() external view returns (address) {
-        return _getAddress("CLIS_BNB_CONTRACT");
-    }
-
-    /**
-     * @notice Returns the address of the HelioProvider
-     */
-    function getHelioProviderAddress() external view returns (address) {
-        return _getAddress("HELIO_PROVIDER_CONTRACT");
-    }
-
-    /**
      * @notice Returns the address of the StakerGateway
      */
     function getStakerGateway() external view returns (address) {
@@ -210,13 +196,11 @@ contract KernelConfig is AccessControlUpgradeable, UUPSUpgradeable, IKernelConfi
      * @notice Returns an array with all the keys of supported addresses
      */
     function _getKeysSupportedForAddresses() private pure returns (bytes32[] memory) {
-        bytes32[] memory keys = new bytes32[](5);
+        bytes32[] memory keys = new bytes32[](3);
 
         keys[0] = ADDRESS_ASSET_REGISTRY;
-        keys[1] = ADDRESS_CLIS_BNB_CONTRACT;
-        keys[2] = ADDRESS_HELIO_PROVIDER_CONTRACT;
-        keys[3] = ADDRESS_STAKER_GATEWAY;
-        keys[4] = ADDRESS_WBNB_CONTRACT;
+        keys[1] = ADDRESS_STAKER_GATEWAY;
+        keys[2] = ADDRESS_WBNB_CONTRACT;
 
         return keys;
     }

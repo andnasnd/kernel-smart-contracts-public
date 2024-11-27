@@ -1,20 +1,25 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { DeployProtocolAbstract } from "script/DeployProtocolAbstract.s.sol";
 
-import { DeployToTestnetAbstract } from "script/dev/DeployToTestnetAbstract.sol";
-
-import { WBNB } from "test/mock/WBNB.sol";
-
-contract DeployToGenericTestnet is DeployToTestnetAbstract {
+contract DeployToGenericTestnet is DeployProtocolAbstract {
     function run() external {
         // deploy mock WBNB token
         _startBroadcast();
-        WBNB wbnb = new WBNB();
+        address wbnbAddress = _deployMockWBNB();
         _stopBroadcast();
 
+        // prompt to deploy demo ERC20
+        bool deployDemoTokens = vm.parseBool(vm.prompt("Deploy demo tokens? [true/false]"));
+
+        // start broadcast
+        _startBroadcast();
+
         // deploy protocol
-        _deploy(address(wbnb), new address[](0));
+        _deployProtocol(wbnbAddress, new address[](0), deployDemoTokens);
+
+        // stop broadcast
+        _stopBroadcast();
     }
 }

@@ -27,7 +27,6 @@ contract DeployAssetRegistry is BaseScript {
         _printUsersDebug();
 
         // deploy AssetRegistry
-        console.log("##### Asset Registry");
         _deployAssetRegistry(deployOutput);
 
         _stopBroadcast();

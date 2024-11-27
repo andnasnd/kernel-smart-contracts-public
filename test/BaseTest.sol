@@ -36,10 +36,6 @@ abstract contract BaseTest is Test {
 
     uint256 internal constant DEFAULT_DEPOSIT_LIMIT = 1000 ether;
 
-    // BSC mainnet constants
-    address internal constant CLIS_BNB = 0x4b30fcAA7945fE9fDEFD2895aae539ba102Ed6F6;
-    address internal constant HELIO_PROVIDE_V2 = 0xa835F890Fcde7679e7F7711aBfd515d2A267Ed0B;
-
     ///
     struct Balances {
         uint256 stakerGateway;
@@ -605,13 +601,6 @@ abstract contract BaseTest is Test {
     function _stakeNative(address sender, uint256 amount) internal {
         _startPrank(sender);
         stakerGateway.stakeNative{ value: amount }("referral_id");
-        vm.stopPrank();
-    }
-
-    /// Stake native
-    function _stakeClisBNB(address sender, uint256 amount) internal {
-        _startPrank(sender);
-        stakerGateway.stakeClisBNB{ value: amount }("referral_id");
         vm.stopPrank();
     }
 

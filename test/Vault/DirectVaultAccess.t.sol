@@ -39,7 +39,7 @@ contract DirectVaultAccessTest is BaseTest {
                 IKernelVault.UnauthorizedCaller.selector,
                 string.concat("Sender ", Strings.toHexString(user), " is not an authorized caller")
             );
-            vaultAssetA.withdraw(1 ether, address(vaultAssetA), true);
+            vaultAssetA.withdraw(1 ether, address(vaultAssetA));
         }
     }
 }
