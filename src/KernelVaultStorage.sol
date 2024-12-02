@@ -16,6 +16,10 @@ abstract contract KernelVaultStorage {
     /// deposit limit
     uint256 internal depositLimit;
 
+    /// Vault's balance
+    /// @dev Vault's balance is tracked internally because anyone could send ERC tokens and spoof the balance
+    uint256 internal totalBalance;
+
     /// storage gap for upgradeability
-    uint256[50] private __gap;
+    uint256[49] private __gap;
 }

@@ -27,6 +27,8 @@ interface IKernelVault {
 
     function balance() external view returns (uint256);
 
+    function balanceERC20() external view returns (uint256);
+
     function balanceOf(address address_) external view returns (uint256);
 
     function deposit(uint256 vaultBalanceBefore, address owner) external returns (uint256);

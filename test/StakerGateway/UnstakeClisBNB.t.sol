@@ -29,7 +29,7 @@ contract UnstakeClisBNBTest is BaseTestWithClisBNBSupport {
 
         // snapshot initial balance
         uint256 clisBNBVaultBalanceInitial = asset.balanceOf(address(clisBNBVault));
-        BaseTest.Balances memory initialNativeBalances = _makeBalanceSnapshot();
+        Balances memory initialNativeBalances = _makeBalanceSnapshot();
 
         // check balances
         assertEq(clisBNBVaultBalanceInitial, 0);
@@ -44,7 +44,7 @@ contract UnstakeClisBNBTest is BaseTestWithClisBNBSupport {
 
         // check balances
         uint256 clisBNBVaultBalance = asset.balanceOf(address(clisBNBVault));
-        BaseTest.Balances memory nativeBalances = _makeBalanceSnapshot();
+        Balances memory nativeBalances = _makeBalanceSnapshot();
 
         assertEq(clisBNBVaultBalance, 0);
         assertEq(nativeBalances.alice, initialNativeBalances.alice);
@@ -58,7 +58,7 @@ contract UnstakeClisBNBTest is BaseTestWithClisBNBSupport {
         KernelVault vault = _getVault(asset);
 
         // snapshot initial balance
-        // BaseTest.Balances memory initialNativeBalances = _makeBalanceSnapshot();
+        // Balances memory initialNativeBalances = _makeBalanceSnapshot();
 
         // stake
         _stakeClisBNB(users.alice, amountToStake);
@@ -113,7 +113,7 @@ contract UnstakeClisBNBTest is BaseTestWithClisBNBSupport {
 
         // @dev Following lines should work because Alice should receive funds, but it doesn't happen.
         //      Anyway, just checking that Alice has 1 withw request is enough
-        // BaseTest.Balances memory balances = _makeBalanceSnapshot();
+        // Balances memory balances = _makeBalanceSnapshot();
         // assertEq(balances.alice, initialNativeBalances.alice);
     }
 

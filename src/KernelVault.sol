@@ -60,6 +60,15 @@ contract KernelVault is HasConfigUpgradeable, IKernelVault, KernelVaultStorage {
     }
 
     /**
+     * @notice Returns the Vault's ERC20 balance of the managed asset
+     * @dev This can not represent the real Vault's balance, as anyone can send tokens bypassing the protocol
+     *      use balance() to know the offical Vault balance
+     */
+    function balanceERC20() external view returns (uint256) {
+        return _balanceERC20();
+    }
+
+    /**
      * @notice Returns the balance of the managed asset for a given owner
      */
     function balanceOf(address address_) external view returns (uint256) {
@@ -82,15 +91,18 @@ contract KernelVault is HasConfigUpgradeable, IKernelVault, KernelVaultStorage {
         onlyVaultsDepositNotPaused
         returns (uint256)
     {
-        uint256 vaultBalance = _balance();
-        uint256 depositAmount = vaultBalance - vaultBalanceBefore;
+        // deposited amount is the difference between the ERC20 Vault's balance before and after receiving the tokens
+        uint256 depositAmount = _balanceERC20() - vaultBalanceBefore;
         require(depositAmount > 0, DepositFailed("Tokens were not transferred to Vault before calling deposit()"));
 
-        // check if deposit limit is exceeded
-        require(vaultBalance <= depositLimit, DepositLimitExceeded(depositAmount, depositLimit));
+        // check if deposit limit is exceeded by checking the internal balance
+        require(_balance() + depositAmount <= depositLimit, DepositLimitExceeded(depositAmount, depositLimit));
 
-        // update balance
+        // update owner's balance
         balances[owner] += depositAmount;
+
+        // update totalBalance
+        totalBalance += depositAmount;
 
         // return deposited amount
         return depositAmount;
@@ -160,6 +172,9 @@ contract KernelVault is HasConfigUpgradeable, IKernelVault, KernelVaultStorage {
         // decrease owner's balance
         balances[owner] -= amount;
 
+        // update totalBalance
+        totalBalance -= amount;
+
         // update allowance of StakerGateway
         if (approveSender) {
             SafeERC20.forceApprove(IERC20(asset), msg.sender, amount);
@@ -169,9 +184,18 @@ contract KernelVault is HasConfigUpgradeable, IKernelVault, KernelVaultStorage {
     /* Private Functions ************************************************************************************************/
 
     /**
-     * @notice Returns the Vault's balance of the managed asset
+     * @notice Returns the Vault's official balance of the managed asset
      */
     function _balance() private view returns (uint256) {
+        return totalBalance;
+    }
+
+    /**
+     * @notice Returns the Vault's ERC20 balance of the managed asset
+     * @dev This can not represent the real Vault's balance, as anyone can send tokens bypassing the protocol
+     *      use balance() to know the offical Vault balance
+     */
+    function _balanceERC20() private view returns (uint256) {
         return IERC20(asset).balanceOf(address(this));
     }
 

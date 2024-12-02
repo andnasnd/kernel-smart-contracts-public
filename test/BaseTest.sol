@@ -9,8 +9,9 @@ import { TimelockController } from "@openzeppelin/contracts/governance/TimelockC
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Upgrades, Options } from "@openzeppelin/upgrades/Upgrades.sol";
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { Safe } from "@safe-smart-account/contracts/Safe.sol";
 
 import { AssetRegistry } from "src/AssetRegistry.sol";
@@ -42,16 +43,34 @@ abstract contract BaseTest is Test {
 
     ///
     struct Balances {
-        uint256 stakerGateway;
+        uint256 admin;
+        uint256 alice;
         uint256 assetRegistry;
+        uint256 bob;
+        uint256 deployer;
+        uint256 manager;
+        uint256 stakerGateway;
         uint256 vaultAssetA;
         uint256 vaultAssetB;
         uint256 vaultAssetWBNB;
-        uint256 deployer;
+    }
+
+    ///
+    struct BalancesERC20 {
         uint256 admin;
-        uint256 manager;
         uint256 alice;
+        uint256 assetRegistry;
         uint256 bob;
+        uint256 deployer;
+        uint256 manager;
+        uint256 stakerGateway;
+    }
+
+    ///
+    struct BalancesVaults {
+        uint256 vaultAssetA;
+        uint256 vaultAssetB;
+        uint256 vaultAssetWBNB;
     }
 
     ///
@@ -514,35 +533,41 @@ abstract contract BaseTest is Test {
         config_.grantRole(role, to);
     }
 
-    /// Make ERC20 token snapshot
+    /// Make ETH token snapshot
     function _makeBalanceSnapshot() internal view returns (Balances memory) {
         return Balances({
-            stakerGateway: address(stakerGateway).balance,
+            alice: users.alice.balance,
+            admin: users.admin.balance,
             assetRegistry: address(assetRegistry).balance,
+            bob: users.bob.balance,
+            deployer: users.deployer.balance,
+            manager: users.manager.balance,
+            stakerGateway: address(stakerGateway).balance,
             vaultAssetA: stakerGateway.getVault(address(tokens.a)).balance,
             vaultAssetB: stakerGateway.getVault(address(tokens.b)).balance,
-            vaultAssetWBNB: stakerGateway.getVault(address(IERC20Demo(address(tokens.wbnb)))).balance,
-            deployer: users.deployer.balance,
-            admin: users.admin.balance,
-            manager: users.manager.balance,
-            alice: users.alice.balance,
-            bob: users.bob.balance
+            vaultAssetWBNB: stakerGateway.getVault(address(IERC20Demo(address(tokens.wbnb)))).balance
         });
     }
 
-    /// Mint ERC20 tokens
-    function _makeERC20BalanceSnapshot(IERC20Demo asset) internal view returns (Balances memory) {
-        return Balances({
-            stakerGateway: asset.balanceOf(address(stakerGateway)),
-            assetRegistry: asset.balanceOf(address(assetRegistry)),
-            vaultAssetA: asset.balanceOf(stakerGateway.getVault(address(tokens.a))),
-            vaultAssetB: asset.balanceOf(stakerGateway.getVault(address(tokens.b))),
-            vaultAssetWBNB: asset.balanceOf(stakerGateway.getVault(address(IERC20Demo(address(tokens.wbnb))))),
-            deployer: asset.balanceOf(users.deployer),
+    /// Make ERC20 token snapshot
+    function _makeERC20BalanceSnapshot(IERC20Demo asset) internal view returns (BalancesERC20 memory) {
+        return BalancesERC20({
             admin: asset.balanceOf(users.admin),
-            manager: asset.balanceOf(users.manager),
             alice: asset.balanceOf(users.alice),
-            bob: asset.balanceOf(users.bob)
+            assetRegistry: asset.balanceOf(address(assetRegistry)),
+            bob: asset.balanceOf(users.bob),
+            deployer: asset.balanceOf(users.deployer),
+            manager: asset.balanceOf(users.manager),
+            stakerGateway: asset.balanceOf(address(stakerGateway))
+        });
+    }
+
+    /// Make Vaults' snapshot
+    function _makeVaultsBalanceSnapshot() internal view returns (BalancesVaults memory) {
+        return BalancesVaults({
+            vaultAssetA: _getVault(tokens.a).balance(),
+            vaultAssetB: _getVault(tokens.b).balance(),
+            vaultAssetWBNB: _getVault(IERC20Demo(address(tokens.wbnb))).balance()
         });
     }
 
@@ -603,17 +628,12 @@ abstract contract BaseTest is Test {
     }
 
     /// Stake
-    function _stake(address sender, IERC20Demo asset, uint256 amount) internal {
-        _startPrank(sender);
-
+    function _stake(address sender, IERC20Demo asset, uint256 amount) internal prankAndRestorePrank(sender) {
         // approve ERC20
         asset.approve(address(stakerGateway), amount);
 
         // stake
         stakerGateway.stake(address(asset), amount, "referral_id");
-
-        //
-        vm.stopPrank();
     }
 
     /// Stake native
@@ -665,6 +685,19 @@ abstract contract BaseTest is Test {
         _startPrank(users.admin);
         config.setAddress(key, addr);
         vm.stopPrank();
+    }
+
+    /// send ERC20 tokens
+    function _transferERC20(
+        IERC20Demo asset,
+        address sender,
+        address to,
+        uint256 amount
+    )
+        internal
+        prankAndRestorePrank(sender)
+    {
+        SafeERC20.safeTransfer(asset, to, amount);
     }
 
     /// @notice Update a proxy

@@ -117,9 +117,9 @@ contract StakerGateway is
     function stakeClisBNB(string calldata referralId) external payable amountNotZero(msg.value) nonReentrant {
         address assetAddress = _config().getClisBnbAddress();
 
-        // get vault balance
+        // get Vault balance before depositing tokens
         IKernelVault vault = _getVaultForAssetAddress(assetAddress);
-        uint256 vaultBalance = vault.balance();
+        uint256 vaultBalance = vault.balanceERC20();
 
         // supply $BNB into ListaDao and delegate the received $clisBNB to the Vault
         address helioProvider = _config().getHelioProviderAddress();
@@ -259,9 +259,9 @@ contract StakerGateway is
     function _stake(address asset, address source, uint256 amount, string calldata referralId) private {
         IERC20 asset_ = IERC20(asset);
 
-        // get vault balance
+        // get Vault balance before depositing tokens
         IKernelVault vault = _getVaultForAssetAddress(asset);
-        uint256 vaultBalance = vault.balance();
+        uint256 vaultBalance = vault.balanceERC20();
 
         // transfer tokens to Vault
         SafeERC20.safeTransferFrom(asset_, source, address(vault), amount);

@@ -15,11 +15,6 @@ contract DeployToSepoliaTestnet is DeployProtocolAbstract {
     TimelockController upgraderTimelock;
 
     function run() external {
-        // external parameters
-        address upgraderTimelockProposer = _promptAddress(
-            "Address with ROLE_PROPOSER (likely a Safe account) that can propose scheduled transactions to the Upgrader Timelock: "
-        );
-
         // print users debug
         _printUsersDebug();
 
@@ -27,7 +22,7 @@ contract DeployToSepoliaTestnet is DeployProtocolAbstract {
         _startBroadcast();
 
         // deploy Upgrader Timelock
-        upgraderTimelock = _deployTimelockController(AddressUtils._buildArray1(upgraderTimelockProposer), 120);
+        upgraderTimelock = _deployTimelockController(AddressUtils._buildArray1(_getAdmin()), 120);
 
         // deploy mock WBNB
         address wbnbAddress = _deployMockWBNB();
@@ -47,8 +42,9 @@ contract DeployToSepoliaTestnet is DeployProtocolAbstract {
 
     ///
     function _grantDefinitiveRoles(DeployOutput memory deployOutput) internal override {
-        //
+        // both admin and timelock (which admin is the proposer) can upgrade contracts
         deployOutput.config.grantRole(deployOutput.config.ROLE_UPGRADER(), address(upgraderTimelock));
+        deployOutput.config.grantRole(deployOutput.config.ROLE_UPGRADER(), _getAdmin());
 
         // grant definitive roles
         super._grantDefinitiveRoles(deployOutput);

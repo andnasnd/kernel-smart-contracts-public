@@ -31,10 +31,11 @@ contract ProtocolBalancesTest is BaseTest {
     //
     function invariant_Balances() public view {
         // snapshot balances
-        Balances memory balancesTokenA = _makeERC20BalanceSnapshot(tokens.a);
-        Balances memory balancesTokenB = _makeERC20BalanceSnapshot(tokens.b);
-        Balances memory balancesTokenWBNB = _makeERC20BalanceSnapshot(IERC20Demo(address(tokens.wbnb)));
+        BalancesERC20 memory balancesTokenA = _makeERC20BalanceSnapshot(tokens.a);
+        BalancesERC20 memory balancesTokenB = _makeERC20BalanceSnapshot(tokens.b);
+        BalancesERC20 memory balancesTokenWBNB = _makeERC20BalanceSnapshot(IERC20Demo(address(tokens.wbnb)));
         Balances memory nativeBalances = _makeBalanceSnapshot();
+        BalancesVaults memory vaultsBalances = _makeVaultsBalanceSnapshot();
 
         // assert StakerGateawy balances
         assertEq(balancesTokenA.stakerGateway, 0, "Token A's Balance of StakerGateway should be 0");
@@ -50,17 +51,17 @@ contract ProtocolBalancesTest is BaseTest {
 
         // Vault TokenA
         assertEq(
-            balancesTokenA.vaultAssetA,
+            vaultsBalances.vaultAssetA,
             handler.vaultToBalance(address(tokens.a)),
             "Unexpected balance of Vault managing Token A"
         );
 
         // Vault TokenB
-        assertEq(balancesTokenB.vaultAssetB, 0, "Unexpected balance of Vault managing Token B");
+        assertEq(vaultsBalances.vaultAssetB, 0, "Unexpected balance of Vault managing Token B");
 
         // Vault TokenWBNB
         assertEq(
-            balancesTokenWBNB.vaultAssetWBNB,
+            vaultsBalances.vaultAssetWBNB,
             handler.vaultToBalance(address(tokens.wbnb)),
             "Unexpected balance of Vault managing Token WBNB"
         );

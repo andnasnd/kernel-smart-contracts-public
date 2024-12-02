@@ -18,19 +18,22 @@ contract UnstakeNativeTest is BaseTest {
         stakerGateway.stakeNative{ value: amountToStake }("referral_id");
 
         // snapshot initial balance
-        BaseTest.Balances memory initialErc20Balances = _makeERC20BalanceSnapshot(asset);
-        BaseTest.Balances memory initialNativeBalances = _makeBalanceSnapshot();
+        BalancesERC20 memory initialErc20Balances = _makeERC20BalanceSnapshot(asset);
+        Balances memory initialNativeBalances = _makeBalanceSnapshot();
+        BalancesVaults memory initialVaultsBalances = _makeVaultsBalanceSnapshot();
 
         // check balances
-        assertEq(initialErc20Balances.vaultAssetWBNB, amountToStake);
+        assertEq(initialVaultsBalances.vaultAssetWBNB, amountToStake);
         assertEq(initialNativeBalances.vaultAssetWBNB, 0);
 
         // unstake
         stakerGateway.unstakeNative(amountToStake, "referral_id");
 
         // check balances
-        BaseTest.Balances memory erc20Balances = _makeERC20BalanceSnapshot(asset);
-        BaseTest.Balances memory nativeBalances = _makeBalanceSnapshot();
+        BalancesERC20 memory erc20Balances = _makeERC20BalanceSnapshot(asset);
+        Balances memory nativeBalances = _makeBalanceSnapshot();
+
+        BalancesVaults memory vaultsBalances = _makeVaultsBalanceSnapshot();
 
         assertEq(erc20Balances.alice, initialErc20Balances.alice);
         assertEq(nativeBalances.alice - initialNativeBalances.alice, amountToStake);
@@ -40,9 +43,7 @@ contract UnstakeNativeTest is BaseTest {
         assertEq(erc20Balances.stakerGateway, 0);
         assertEq(nativeBalances.stakerGateway, 0);
 
-        // assertEq(erc20Balances.assetRegistry, 0);
-
-        assertEq(erc20Balances.vaultAssetWBNB, 0);
+        assertEq(vaultsBalances.vaultAssetWBNB, 0);
         assertEq(nativeBalances.vaultAssetWBNB, 0);
     }
 

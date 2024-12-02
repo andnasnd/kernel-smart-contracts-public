@@ -100,8 +100,9 @@ The contract allows pausing of `Deposits to all Vaults` or `Withdrawals from all
 - **Manager**: Responsible for managing system configurations, such as adding vaults and assets
 - **Pauser**: Has the ability to pause the entire protocol or some specific features like deposit and withdrawa in case of emergency
 
-# Deployed contracts
+# Additional Resources
 
-Kernel Protocol Mainnet Addresses can be found [here](doc/contract-address/Mainnet.md)
-
-Kernel Protocol Testnet Addresses can be found [here](doc/contract-address/Testnet.md)
+- Deployed contracts
+    - [Kernel Protocol on BSC Mainnet](doc/contract-address/Mainnet.md)
+    - [Kernel Protocol on BSC Testnet](doc/contract-address/Testnet.md)
+- [How to Deploy](doc/Deploy.md)

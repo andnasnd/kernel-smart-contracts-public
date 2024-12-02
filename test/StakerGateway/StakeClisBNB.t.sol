@@ -19,7 +19,7 @@ contract stakeClisBNBtest is BaseTestWithClisBNBSupport {
 
         // snapshot initial balance
         uint256 clisBNBVaultBalanceInitial = asset.balanceOf(address(clisBNBVault));
-        BaseTest.Balances memory initialNativeBalances = _makeBalanceSnapshot();
+        Balances memory initialNativeBalances = _makeBalanceSnapshot();
 
         // check balances
         assertEq(clisBNBVaultBalanceInitial, 0);
@@ -31,7 +31,7 @@ contract stakeClisBNBtest is BaseTestWithClisBNBSupport {
 
         // snapshot balances
         uint256 clisBNBVaultBalance = asset.balanceOf(address(clisBNBVault));
-        BaseTest.Balances memory nativeBalances = _makeBalanceSnapshot();
+        Balances memory nativeBalances = _makeBalanceSnapshot();
 
         // check balances
         assertEq(clisBNBVaultBalance, amountToStake);

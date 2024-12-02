@@ -22,10 +22,11 @@ contract StakeTest is BaseTest {
         _mintERC20(asset, users.alice, 10 ether);
 
         // snapshot initial balance
-        BaseTest.Balances memory initialErc20Balances = _makeERC20BalanceSnapshot(asset);
+        BalancesERC20 memory initialErc20Balances = _makeERC20BalanceSnapshot(asset);
+        BalancesVaults memory initialVaultsBalances = _makeVaultsBalanceSnapshot();
 
         // check balances
-        assertEq(initialErc20Balances.vaultAssetA, 0);
+        assertEq(initialVaultsBalances.vaultAssetA, 0);
 
         //
         _startPrank(users.alice);
@@ -37,13 +38,13 @@ contract StakeTest is BaseTest {
         stakerGateway.stake(address(asset), amountToStake, "referral_id");
 
         // check balances
-        BaseTest.Balances memory erc20Balances = _makeERC20BalanceSnapshot(asset);
+        BalancesERC20 memory erc20Balances = _makeERC20BalanceSnapshot(asset);
+        BalancesVaults memory vaultsBalances = _makeVaultsBalanceSnapshot();
 
         assertEq(initialErc20Balances.alice - erc20Balances.alice, amountToStake);
         assertEq(stakerGateway.balanceOf(address(asset), users.alice), amountToStake);
         assertEq(erc20Balances.stakerGateway, 0);
-        // assertEq(erc20Balances.assetRegistry, 0);
-        assertEq(erc20Balances.vaultAssetA, amountToStake);
+        assertEq(vaultsBalances.vaultAssetA, amountToStake);
     }
 
     ///
@@ -75,6 +76,43 @@ contract StakeTest is BaseTest {
 
         //
         assertEq(stakerGateway.balanceOf(address(asset), users.alice), 90 ether);
+    }
+
+    /// Vault's balance should be immune to an attack where users send tokens directly to the vault to mess with the
+    /// balance
+    function test_Stake_WithERC20TransferSpoofingDepositLimit() public {
+        //
+        IERC20Demo asset = tokens.a;
+
+        // mint some tokens
+        _mintERC20(asset, users.alice, 10 ether);
+        _mintERC20(asset, users.bob, 10 ether);
+
+        // alice stakes 1 ETH
+        _stake(users.alice, asset, 1 ether);
+
+        // bob stakes 1 ETH
+        _stake(users.bob, asset, 1 ether);
+
+        // alice stakes 1 ETH
+        _stake(users.alice, asset, 1 ether);
+
+        // attack: Bob sends 0.1 ETH directly to the vault
+        _transferERC20(asset, users.bob, address(_getVault(asset)), 0.1 ether);
+
+        // alice stakes 1 ETH
+        _stake(users.alice, asset, 1 ether);
+
+        // check users' staked amounts
+        assertEq(stakerGateway.balanceOf(address(asset), users.alice), 3 ether);
+        assertEq(stakerGateway.balanceOf(address(asset), users.bob), 1 ether);
+
+        // // check ERC20 Vaults' balances
+        BalancesVaults memory vaultsBalances = _makeVaultsBalanceSnapshot();
+
+        // // check official Vaults' balances
+        assertEq(asset.balanceOf(address(_getVault(tokens.a))), 4.1 ether);
+        assertEq(vaultsBalances.vaultAssetA, 4 ether);
     }
 
     ///

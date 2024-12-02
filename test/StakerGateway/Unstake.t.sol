@@ -17,10 +17,11 @@ contract UnstakeTest is BaseTest {
         _mintERC20(asset, users.alice, 10 ether);
 
         // snapshot initial balance
-        BaseTest.Balances memory initialErc20Balances = _makeERC20BalanceSnapshot(asset);
+        BalancesERC20 memory initialErc20Balances = _makeERC20BalanceSnapshot(asset);
+        BalancesVaults memory initialVaultsBalances = _makeVaultsBalanceSnapshot();
 
         // check balances
-        assertEq(initialErc20Balances.vaultAssetA, 0);
+        assertEq(initialVaultsBalances.vaultAssetA, 0);
 
         // stake
         _stake(users.alice, asset, amountToStake);
@@ -31,13 +32,13 @@ contract UnstakeTest is BaseTest {
         stakerGateway.unstake(address(asset), amountToStake, "referral_id");
 
         // check balances
-        BaseTest.Balances memory erc20Balances = _makeERC20BalanceSnapshot(asset);
+        BalancesERC20 memory erc20Balances = _makeERC20BalanceSnapshot(asset);
+        BalancesVaults memory vaultsBalances = _makeVaultsBalanceSnapshot();
 
         assertEq(erc20Balances.alice, initialErc20Balances.alice);
         assertEq(stakerGateway.balanceOf(address(asset), users.alice), 0);
         assertEq(erc20Balances.stakerGateway, 0);
-        // assertEq(erc20Balances.assetRegistry, 0);
-        assertEq(erc20Balances.vaultAssetA, 0);
+        assertEq(vaultsBalances.vaultAssetA, 0);
     }
 
     ///
