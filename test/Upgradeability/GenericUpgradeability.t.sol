@@ -10,7 +10,7 @@ import { StakerGatewayUpgraded } from "test/mock/upgradeability/StakerGatewayUpg
 
 import { IHasVersion } from "src/interfaces/IHasVersion.sol";
 
-contract UpgradeabilityTest is BaseTest {
+contract GenericUpgradeabilityTest is BaseTest {
     ///
     function test_Upgradeability() public {
         _assertUpgradable(address(config), "KernelConfigUpgraded.sol", "KernelConfig.sol");
@@ -35,14 +35,13 @@ contract UpgradeabilityTest is BaseTest {
         // _upgradeProxy(proxyAddr, contractName, referenceContract);
         // >>> TODO
 
-        // upgrade with permission
-        _startPrank(users.admin);
-
         // assert
         assertEq(IHasVersion(proxyAddr).version(), "1.0");
 
         // upgrade
-        _upgradeProxy(proxyAddr, contractName, referenceContract);
+        Options memory opts;
+        opts.referenceContract = referenceContract;
+        _upgradeProxy(users.upgrader, proxyAddr, contractName, opts);
 
         // assert
         assertEq(IHasVersion(proxyAddr).version(), "NEXT_VERSION");

@@ -506,6 +506,22 @@ abstract contract BaseTest is Test {
         vm.createSelectFork("https://bsc-dataseed1.binance.org/");
     }
 
+    /// @dev The "Donation bug" consisted in the fact that a sender could mess with Vault's depositLimit by just sending
+    ///      ERC20 tokens directly to the Vault
+    ///      THe function forks BSC Mainnet prior to deploy the fix fir that
+    /// @dev An Alchemy API key is required to fork BSC Mainnet because an archive full node is needed
+    function _forkBscMainnetPriorToFixDonationBug() internal {
+        // @dev transactions when upgradeTo() was called to use the new implementations containing the fix:
+        //      https://bscscan.com/tx/0x2f9c0545a1be7aa497acf7a29f75f5328342a0843663a9feae1e7c9becc2d8f9
+        //      https://bscscan.com/tx/0xcb8bc381484bc9d9c0f563cb5e2d314bbf8c97a03b697008831d26ab3a50df25
+        //      the lower block between them is 44522903 so blockchain is forked 1 block before
+
+        vm.createSelectFork(
+            string.concat("https://bnb-mainnet.g.alchemy.com/v2/", vm.envString("ALCHEMY_API_KEY")),
+            uint256(44_522_903 - 1)
+        );
+    }
+
     ///
     function _getCurrentMsgSender() internal returns (address) {
         (address msgSender,) = _getCurrentCallers();
@@ -700,16 +716,40 @@ abstract contract BaseTest is Test {
         SafeERC20.safeTransfer(asset, to, amount);
     }
 
-    /// @notice Update a proxy
-    /// @param proxyAddr the address of the proxy to upgrade the implementation to
-    /// @param contractName the name of the new contract
-    /// @param referenceContract the name of the contract that the new one is upgrading
-    function _upgradeProxy(address proxyAddr, string memory contractName, string memory referenceContract) internal {
-        Options memory opts;
-        opts.referenceContract = referenceContract;
-
-        _startPrank(users.upgrader);
+    /**
+     * @dev Upgrades the proxy contract to a new implementation.
+     * @param proxyAddr The address of the proxy contract to be upgraded.
+     * @param contractName The name of the new contract implementation.
+     * @param opts Additional options for the upgrade process.
+     */
+    function _upgradeProxy(
+        address caller,
+        address proxyAddr,
+        string memory contractName,
+        Options memory opts
+    )
+        internal
+        prankAndRestorePrank(caller)
+    {
         Upgrades.upgradeProxy(proxyAddr, contractName, "", opts);
-        vm.stopPrank();
+    }
+
+    /**
+     * @dev Upgrades the beacon contract to a new implementation.
+     * @param caller The address of the caller initiating the upgrade.
+     * @param beacon The address of the beacon contract to be upgraded.
+     * @param contractName The name of the contract to be used for the upgrade.
+     * @param opts Additional options for the upgrade process.
+     */
+    function _upgradeBeacon(
+        address caller,
+        address beacon,
+        string memory contractName,
+        Options memory opts
+    )
+        internal
+        prankAndRestorePrank(caller)
+    {
+        Upgrades.upgradeBeacon(beacon, contractName, opts);
     }
 }

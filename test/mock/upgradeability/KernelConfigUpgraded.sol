@@ -7,8 +7,6 @@ import { GenericUpgraded } from "test/mock/upgradeability/GenericUpgraded.sol";
 
 /**
  * @title Mock KernelConfig Contract to test UUPS upgradeability
- * @custom:oz-upgrades
- * @custom:oz-upgrades-from KernelConfig
  */
 contract KernelConfigUpgraded is KernelConfig, GenericUpgraded {
     ///

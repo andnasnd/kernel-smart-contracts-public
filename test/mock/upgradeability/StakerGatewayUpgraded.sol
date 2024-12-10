@@ -7,8 +7,6 @@ import { GenericUpgraded } from "test/mock/upgradeability/GenericUpgraded.sol";
 
 /**
  * @title Mock StakerGateway Contract to test UUPS upgradeability
- * @custom:oz-upgrades
- * @custom:oz-upgrades-from StakerGateway
  */
 contract StakerGatewayUpgraded is StakerGateway, GenericUpgraded {
     ///
