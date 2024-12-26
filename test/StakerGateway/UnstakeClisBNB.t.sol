@@ -81,9 +81,7 @@ contract UnstakeClisBNBTest is BaseTestWithClisBNBSupport {
 
         // undelegateFrom by ListaStakeManager
         vm.prank(0x9c975db5E112235b6c4a177C2A5c67ab4d758499);
-        IListaStakeManager(LISTA_DAO_STAKE_MANAGER).undelegateFrom(
-            0xF2B1d86DC7459887B1f7Ce8d840db1D87613Ce7f, 100 ether
-        );
+        IListaStakeManager(LISTA_DAO_STAKE_MANAGER).undelegateFrom(0xF2B1d86DC7459887B1f7Ce8d840db1D87613Ce7f, 1 ether);
 
         vm.warp(block.timestamp + 14 days);
 
@@ -93,15 +91,15 @@ contract UnstakeClisBNBTest is BaseTestWithClisBNBSupport {
 
         vm.warp(block.timestamp + 14 days);
 
-        // assert that the number of withrrawal requests for StakerGateway and the Vault is 0
+        // assert that the number of withdrawal requests for StakerGateway and the Vault is 0
         assertEq(ISnBnbYieldConverterStrategy(LISTA_DAO_STRATEGY).getWithdrawRequests(address(stakerGateway)).length, 0);
         assertEq(ISnBnbYieldConverterStrategy(LISTA_DAO_STRATEGY).getWithdrawRequests(address(vault)).length, 0);
 
-        // asssert Alice's withhdrawal requests
+        // asssert Alice's withdrawal requests
         ISnBnbYieldConverterStrategy.UserWithdrawRequest[] memory aliceWithdrawrequests =
             ISnBnbYieldConverterStrategy(LISTA_DAO_STRATEGY).getWithdrawRequests(users.alice);
 
-        // assert that the number of withrrawal requests for Alice and the Vault is 1
+        // assert that the number of withdrawal requests for Alice and the Vault is 1
         assertEq(aliceWithdrawrequests.length, 1);
         assertEq(aliceWithdrawrequests[0].recipient, users.alice);
         assertEq(aliceWithdrawrequests[0].amount, amountToStake);

@@ -516,10 +516,7 @@ abstract contract BaseTest is Test {
         //      https://bscscan.com/tx/0xcb8bc381484bc9d9c0f563cb5e2d314bbf8c97a03b697008831d26ab3a50df25
         //      the lower block between them is 44522903 so blockchain is forked 1 block before
 
-        vm.createSelectFork(
-            string.concat("https://bnb-mainnet.g.alchemy.com/v2/", vm.envString("ALCHEMY_API_KEY")),
-            uint256(44_522_903 - 1)
-        );
+        vm.createSelectFork(vm.envString("BSC_MAINNET_RPC"), uint256(44_522_903 - 1));
     }
 
     ///
