@@ -57,8 +57,8 @@ The `StakerGateway` is the contract that interfaces directly with users, enablin
    1. User calls `stake()` function to stake an asset
    2. The `StakerGateway` transfers the tokens from `User` to the `KernelVault` responsible for the specific asset
    3. `KernelVault` increases `User`'s balance
-1. **Untaking**
-   1. User calls `unstake()` function to stake an asset
+1. **Unstaking**
+   1. User calls `unstake()` function to unstake an asset
    2. The `StakerGateway` transfers the tokens from the `KernelVault` responsible for the specific asset to `User`
    3. `KernelVault` decreases `User`'s balance
 
